@@ -1,414 +1,344 @@
-# 🚀 GO LIVE GUIDE — GrowthMatrix
+# 🚀 GO LIVE GUIDE — GrowthMatrix (v3)
 
 **What this file is:** a step-by-step runbook that takes this repo from "works on my machine"
-to a **live, public SaaS on the internet**, written so that:
+to a **live, paying-customer-ready SaaS**, written so that:
 
 - **A human with zero DevOps experience** can follow it (every click is spelled out).
-- **Claude (Opus 4.8) can execute it.** Open a Claude Code session in this repo and say:
-  > "Read GO_LIVE_GUIDE.md and execute Phase 2"
-  Claude does every step marked 🤖. You do every step marked 👤 (those need *your*
-  browser, *your* accounts, *your* credit card — an AI cannot and must not do them).
+- **A Claude agent can execute it.** Open a Claude Code session in this repo and say:
+  > "Read GO_LIVE_GUIDE.md and execute Phase 1"
 
-**Rules for Claude executing this guide:**
-1. Execute ONE phase at a time, in order. Verify the checkpoint at the end of a phase before moving on.
-2. When you hit a `⏸ STOP` box, stop and ask the human for the value it describes. Never invent keys, URLs, or secrets.
-3. Never commit `.env` or any file containing a real secret. Check `git status` before every commit.
-4. If a command fails, read the error, fix the cause, and re-run — don't skip.
-5. Tick the checklist below (edit this file) as phases complete.
+  Claude does every step marked 🤖. You do every step marked 👤 (those need *your*
+  browser, *your* accounts, *your* card — an AI cannot and must not do them).
+
+**Rules for the agent executing this guide:**
+1. Execute ONE phase at a time, in order. Never continue past a failed ✅ VERIFY — diagnose, fix, re-verify.
+2. At a `⏸ STOP` box, stop and ask the human for the value described. Never invent keys, URLs, or secrets.
+3. Secrets (`sk_…`, `re_…`, tokens, DB URLs) go ONLY into the hosting provider's env-var UI or the local `.env` (git-ignored). Never into code, git, or logs.
+4. Tick the checklist below as phases complete.
+
+> ### ⚠️ READ THIS FIRST — why Phase 1 is not optional
+> This project was once lost completely because it lived only inside a temporary
+> cloud container with no git remote. When the container recycled, everything went
+> with it. It was recoverable only from session transcripts. **Do Phase 1 before
+> anything else.** Code that exists in exactly one place does not really exist.
 
 ---
 
 ## Progress checklist
 
-- [ ] Phase 1 — Code on GitHub
-- [ ] Phase 2 — Proper database migrations
-- [ ] Phase 3 — Production database (Neon)
-- [ ] Phase 4 — Prep the repo for Vercel
-- [ ] Phase 5 — Deploy to Vercel
-- [ ] Phase 6 — Smoke-test the live app
-- [ ] Phase 7 — Custom domain (optional)
-- [ ] Phase 8 — Password reset emails (strongly recommended)
-- [ ] Phase 9 — Login rate limiting (recommended)
-- [ ] Phase 10 — What to build next (invites, member portal, billing)
+- [ ] **Phase 0** — Pre-flight quality gate (5 min, local)
+- [ ] **Phase 1** — Code on GitHub ← *do this first, today*
+- [ ] **Phase 2** — Production database (Neon)
+- [ ] **Phase 3** — Deploy to Vercel
+- [ ] **Phase 4** — Smoke-test the live app
+- [ ] **Phase 5** — Custom domain
+- [ ] **Phase 6** — Email delivery (Resend) — required for real users
+- [ ] **Phase 7** — Automated weekly backups
+- [ ] **Phase 8** — Legal & compliance switch-on (EU / UK / TR / US / CA)
+- [ ] **Phase 9** — Billing with Stripe (only when you're ready to charge)
+- [ ] **Phase 10** — What to build next
 
-**Accounts you will create along the way (all have free tiers):**
-| Service | For | URL |
+**Accounts you'll create (all have free tiers):**
+
+| Service | For | Cost |
 |---|---|---|
-| GitHub | storing the code | github.com |
-| Neon | production Postgres database | neon.tech |
-| Vercel | hosting the app | vercel.com |
-| Resend | sending password-reset emails (Phase 8) | resend.com |
+| GitHub | code, CI, weekly backups | free |
+| Neon | production Postgres | free tier fine |
+| Vercel | hosting | free Hobby to start |
+| Resend | verification & password-reset email | free: 100/day |
+| Stripe *(Phase 9)* | subscriptions | % of sales |
+| A domain | your address | ~$10/yr |
+
+---
+
+## ✅ What is already built (you do NOT need to build these)
+
+The app is feature-complete for a first launch. Already working and verified end-to-end:
+
+- **Auth:** signup/login/logout, bcrypt(12) hashes, signed httpOnly JWT session cookie.
+- **Email verification** — token emailed at signup, in-app banner with resend.
+- **Password reset** — single-use SHA-256-hashed token, 1-hour expiry, reuse rejected.
+- **Login lockout** — 5 failed attempts per email / 15 min → `429`.
+- **Session revocation** — a password reset invalidates every existing cookie everywhere (pages *and* APIs).
+- **Multi-tenancy** — every row is scoped to an Organization; all queries filter by the session's org.
+- **Security headers** — CSP, HSTS, X-Frame-Options: DENY, nosniff, Referrer-Policy, Permissions-Policy.
+- **GDPR/KVKK/CCPA/PIPEDA:** `/terms`, `/privacy`, `/dpa` pages; required consent at signup; a separate opt-in for marketing; **"Download my data"** (full JSON export); **"Delete account"** (password-confirmed, removes the whole workspace when you're its last user); audit logging.
+- **The product itself** — 13 screens: Team, Profile, Skills (rate), Skill gaps, Growth simulator, Self vs manager, Compare, Promotion, 1:1 prep, History & log, Capture inbox, Roles & skills framework, Account & privacy.
+- **Migrations** (`prisma/migrations/`), **CI** (`.github/workflows/ci.yml`), **weekly backups** (`.github/workflows/backup.yml`), **13 unit tests**, and a clean `npm audit`.
+
+**Not built yet:** billing (Phase 9), inviting other managers, a login for the team members themselves, and the Slack/CSV integrations (they show an honest "not available yet" toast).
+
+---
+
+## Phase 0 — Pre-flight quality gate
+
+🤖 Run all four checks from the repo root. Every one must pass before you deploy anything.
+
+```bash
+npx tsc --noEmit && npm run lint && npm test && npm audit --omit=dev
+```
+
+✅ **VERIFY:** typecheck prints nothing · lint prints nothing · `13 passed` (or more) · `found 0 vulnerabilities`.
+
+Then confirm a production build succeeds:
+
+```bash
+npm run build
+```
+
+✅ **VERIFY:** ends with a route table and no red errors.
+> If it fails with `Cannot find module for page: /_not-found`, a `next dev` server is
+> running and fighting over `.next`. Stop it (`pkill -f "next dev"`), `rm -rf .next`, rebuild.
 
 ---
 
 ## Phase 1 — Put the code on GitHub
 
-Right now the code only exists locally. If this machine dies, the app is gone.
+### 1.1 👤 Create an empty private repository
+1. **https://github.com** → **+** (top right) → **New repository**.
+2. Name: `growthmatrix`. Visibility: **Private**.
+3. **Do NOT tick** "Add a README", ".gitignore", or "license" — the repo must be empty.
+4. **Create repository**, then copy the URL: `https://github.com/YOURNAME/growthmatrix.git`
 
-### 1.1 👤 Create an empty GitHub repository
-1. Go to **https://github.com** and sign in (or create an account).
-2. Click the **+** in the top-right → **New repository**.
-3. Repository name: `growthmatrix` (or anything you like).
-4. Visibility: **Private**.
-5. **IMPORTANT: do NOT tick** "Add a README", "Add .gitignore", or "Choose a license". The repo must be completely empty.
-6. Click **Create repository**.
-7. Copy the repo URL from the page. It looks like: `https://github.com/YOURNAME/growthmatrix.git`
+### 1.2 👤 Create a push token
+1. **https://github.com/settings/tokens** → **Generate new token (classic)**.
+2. Note: `growthmatrix push` · Expiration: 90 days · Scope: tick **repo**.
+3. **Generate**, then **copy it now** (shown once). Looks like `ghp_…`.
 
-### 1.2 👤 Create a token so the terminal can push
-1. Go to **https://github.com/settings/tokens** → **Generate new token** → **Generate new token (classic)**.
-2. Note: `growthmatrix push`. Expiration: 90 days. Scopes: tick **repo** (the whole section).
-3. Click **Generate token** and **copy it now** (it's shown only once). It looks like `ghp_xxxxxxxx`.
+> ⏸ **STOP** — the agent needs (1) the repo URL and (2) the token before continuing.
 
-> ⏸ **STOP** — Claude needs two values from you before continuing:
-> 1. The repo URL from step 1.1
-> 2. The token from step 1.2
-
-### 1.3 🤖 Push the code
+### 1.3 🤖 Push
 ```bash
-cd <repo-root>
-# Make sure no secrets are about to be committed:
-git check-ignore .env || echo "DANGER: .env is not ignored — fix .gitignore first"
+cd /home/claude/repo
+git check-ignore .env && echo "SAFE: .env ignored"     # must print SAFE
+git status --short | grep -E "\.env$" && echo "DANGER" || echo "no secrets staged"
 
-# Add the remote (token goes in the URL; replace both placeholders):
 git remote add origin https://<TOKEN>@github.com/<YOURNAME>/growthmatrix.git
-
-# Push the branch:
-git push -u origin feat/growthmatrix-saas
-
-# Also publish it as the main branch so Vercel can use it:
-git checkout -b main 2>/dev/null || git checkout main
-git merge feat/growthmatrix-saas --ff-only 2>/dev/null || git reset --hard feat/growthmatrix-saas
+git branch -M main
 git push -u origin main
 ```
-> Note: the token is stored in `.git/config` on this machine only — that file is never
-> pushed. Fine for now; delete the token from GitHub when you're done with this guide.
 
-**✅ Checkpoint:** open `https://github.com/YOURNAME/growthmatrix` in the browser — you should
-see the code (`src/`, `prisma/`, `package.json`…). If the page shows the files, Phase 1 is done.
+✅ **VERIFY:** refresh the GitHub page — `src/`, `prisma/`, `package.json` are there, and the
+**Actions** tab shows a **CI** run going green. A red X on a future commit means: don't deploy it.
 
----
-
-## Phase 2 — Proper database migrations
-
-**Why:** the schema was applied with `prisma db push` (a dev shortcut). Production needs
-**migration files** — versioned SQL scripts — so any fresh database can be built identically.
-
-### 2.1 🤖 Make sure local Postgres is running
-```bash
-pg_isready || pg_ctlcluster 16 main start   # (on this container; on another machine, start Postgres however it's installed)
-pg_isready                                   # must print "accepting connections"
-```
-
-### 2.2 🤖 Generate the baseline migration
-```bash
-cd <repo-root>
-mkdir -p prisma/migrations/0_init
-npx prisma migrate diff \
-  --from-empty \
-  --to-schema-datamodel prisma/schema.prisma \
-  --script > prisma/migrations/0_init/migration.sql
-
-# Tell Prisma the local DB already has this applied (it does — via db push):
-npx prisma migrate resolve --applied 0_init
-```
-
-### 2.3 🤖 Verify and commit
-```bash
-npx prisma migrate status        # must say: "Database schema is up to date!"
-head -5 prisma/migrations/0_init/migration.sql   # should show CREATE TYPE / CREATE TABLE statements
-git add prisma/migrations
-git commit -m "Add baseline Prisma migration"
-git push origin main
-```
-
-**✅ Checkpoint:** `npx prisma migrate status` reports up-to-date, and
-`prisma/migrations/0_init/migration.sql` exists and is full of `CREATE TABLE` statements.
-
-> From now on, any schema change is done with `npx prisma migrate dev --name describe_the_change`
-> (never `db push` again).
+👤 After setup, delete that token at github.com/settings/tokens (it's stored in `.git/config` locally).
 
 ---
 
-## Phase 3 — Production database (Neon)
+## Phase 2 — Production database (Neon)
 
-**Why:** the app needs a Postgres database that lives in the cloud, not in this container.
-Neon has a genuinely free tier and works perfectly with Vercel + Prisma.
+The local Postgres dies with the machine; Neon is hosted and free to start.
 
-### 3.1 👤 Create the database
-1. Go to **https://neon.tech** → **Sign up** (easiest: "Continue with GitHub").
-2. Click **Create project**.
-   - Name: `growthmatrix`
-   - Postgres version: **16**
-   - Region: pick the one closest to your users (e.g. Frankfurt for Europe).
-3. After it creates, you land on the dashboard. Find the **Connection string** box.
-4. There is a toggle/checkbox for **"Pooled connection"**. You need **BOTH** strings:
-   - With pooling **ON** → this is your `DATABASE_URL`. The host contains `-pooler`.
-   - With pooling **OFF** → this is your `DIRECT_URL`. Same but without `-pooler`.
-5. Both look like:
-   `postgresql://user:password@ep-something-pooler.region.aws.neon.tech/neondb?sslmode=require`
+### 2.1 👤 Create it
+1. **https://neon.tech** → sign up (easiest: Continue with GitHub) → **Create project**.
+2. Name `growthmatrix` · Postgres **16** · region closest to your users (e.g. Frankfurt).
+3. On the dashboard find **Connection string**. You need **BOTH** forms:
+   - **Pooled** (host contains `-pooler`) → this is `DATABASE_URL`
+   - **Direct** (no `-pooler`) → this is `DIRECT_URL`
+4. Both end with `?sslmode=require`.
 
-> ⏸ **STOP** — Claude needs both connection strings (pooled and direct) before continuing.
-> Paste them to Claude in the chat. They contain a password — that's expected; they will only
-> be stored in Vercel's encrypted settings and your local `.env` (which is git-ignored).
+> ⏸ **STOP** — the agent needs both connection strings. They contain a password; they go
+> only into Vercel's encrypted env vars and your local `.env`.
 
-### 3.2 🤖 Teach Prisma about the two URLs
-Edit `prisma/schema.prisma` — change the `datasource` block to exactly:
-```prisma
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
-}
-```
-Then edit the local `.env` and add a `DIRECT_URL` line pointing at the same local database:
-```
-DIRECT_URL="postgresql://gm_app:gm_dev_password@127.0.0.1:5432/growthmatrix?schema=public"
-```
-Verify nothing broke locally:
-```bash
-npx prisma generate && npx prisma migrate status   # still "up to date"
-npx tsc --noEmit                                    # still 0 errors
-git add prisma/schema.prisma
-git commit -m "Support pooled + direct database URLs for production"
-git push origin main
-```
-
-**✅ Checkpoint:** Neon project exists, you have both URLs saved somewhere safe,
-`migrate status` still passes locally.
+✅ **VERIFY:** 🤖 `npx prisma migrate status` against the Neon URL reports the migration list
+(no schema setup needed — `prisma migrate deploy` runs automatically on every Vercel build).
 
 ---
 
-## Phase 4 — Prep the repo for Vercel
+## Phase 3 — Deploy to Vercel
 
-**Why:** two small things Vercel needs: (a) generate the Prisma client during install,
-(b) run migrations against the production DB during every deploy.
-
-### 4.1 🤖 Add build hooks to `package.json`
-Add these two lines inside `"scripts"` (keep all existing scripts):
-```json
-"postinstall": "prisma generate",
-"vercel-build": "prisma migrate deploy && next build"
-```
-(Vercel automatically uses `vercel-build` instead of `build` when it exists.)
-
-### 4.2 🤖 Create `.env.example` (documentation for humans; contains NO real secrets)
-Create the file `.env.example` with exactly:
-```
-# Postgres — pooled connection (Neon: host contains "-pooler")
-DATABASE_URL="postgresql://user:password@host/db?sslmode=require"
-# Postgres — direct connection (Neon: same host without "-pooler"); used for migrations
-DIRECT_URL="postgresql://user:password@host/db?sslmode=require"
-# Session signing secret — generate with:  openssl rand -base64 32
-AUTH_SECRET="change-me"
-```
-
-### 4.3 🤖 Verify and commit
-```bash
-npm install                       # runs postinstall — must succeed
-npm run build                     # full production build — must succeed
-git add package.json package-lock.json .env.example
-git status                        # MUST NOT list .env
-git commit -m "Add Vercel build hooks and env template"
-git push origin main
-```
-
-**✅ Checkpoint:** `npm run build` succeeds locally and the push is on GitHub.
-
----
-
-## Phase 5 — Deploy to Vercel
-
-### 5.1 🤖 Generate the production session secret
+### 3.1 🤖 Generate the production session secret
 ```bash
 openssl rand -base64 32
 ```
-Copy the output — this is your production `AUTH_SECRET`. Give it to the human.
+Give the output to the human — it's `AUTH_SECRET`. (Changing it later logs everyone out.)
 
-### 5.2 👤 Create the Vercel project
-1. Go to **https://vercel.com** → **Sign up** → **Continue with GitHub** (this links your repos).
-2. Click **Add New…** → **Project**.
-3. Find `growthmatrix` in the list → **Import**. (If it's not listed, click "Adjust GitHub App Permissions" and grant access to the repo.)
-4. Leave **Framework Preset** = Next.js and **Root Directory** = `./` (defaults are correct).
-5. Open the **Environment Variables** section and add these **three** variables
-   (paste values exactly, no quotes):
+### 3.2 👤 Import the project
+1. **https://vercel.com** → sign up with the **same GitHub account** → **Add New… → Project**.
+2. Find `growthmatrix` → **Import**. (Not listed? "Adjust GitHub App Permissions" → grant access.)
+3. Framework auto-detects **Next.js**; leave **Root Directory** as `./`.
+4. Open **Environment Variables** and add (Production scope):
 
-   | Name | Value |
-   |---|---|
-   | `DATABASE_URL` | the **pooled** Neon string (host contains `-pooler`) |
-   | `DIRECT_URL` | the **direct** Neon string (no `-pooler`) |
-   | `AUTH_SECRET` | the random string from step 5.1 |
+| Name | Value |
+|---|---|
+| `DATABASE_URL` | the **pooled** Neon string |
+| `DIRECT_URL` | the **direct** Neon string |
+| `AUTH_SECRET` | the value from 3.1 |
+| `APP_URL` | your future URL, e.g. `https://growthmatrix.vercel.app` (no trailing slash) |
+| `ADMIN_EMAILS` | your email — grants owner access |
+| `COMPANY_NAME` | the entity named on the legal pages |
+| `COMPANY_CONTACT_EMAIL` | a mailbox you actually read (privacy requests land here) |
+| `RESEND_API_KEY` | leave empty for now — Phase 6 |
+| `EMAIL_FROM` | leave empty for now — Phase 6 |
 
-6. Click **Deploy**. Wait ~2 minutes. Confetti = success.
-7. Click **Continue to Dashboard** → you'll see your live URL, like
-   `https://growthmatrix-xxxx.vercel.app`. **Copy it.**
+5. **Deploy** and wait ~2 minutes.
 
-**If the build fails:** click the failed deployment → read the log. The two usual causes:
-- migrations failed → `DIRECT_URL` is wrong (check for typos / missing `sslmode=require`);
-- "PrismaClient not generated" → `postinstall` script missing (redo Phase 4.1).
-Paste the log to Claude and it will diagnose.
+**If the build fails**, open the failed deployment → read the log:
+- migrations failed → `DIRECT_URL` typo or missing `?sslmode=require`
+- "PrismaClient not generated" → the `postinstall` script was removed from package.json
 
-**✅ Checkpoint:** opening the Vercel URL shows the GrowthMatrix **login page**.
-
----
-
-## Phase 6 — Smoke-test the live app
-
-### 6.1 👤 Walk through the whole product once (on the live URL)
-1. Open `https://<your-app>.vercel.app` → you should be redirected to **/login**.
-2. Click **Create a workspace** → fill in your name, org name, email, password (8+ chars) → **Create workspace**.
-3. You land on the Team page onboarding. Click **Load PM starter framework** → toast confirms.
-4. Click **+ Add member** → add a real teammate (pick role + level) → they appear in the table.
-5. Click the member → their **Profile** loads with a radar chart.
-6. Go to **Skills (rate)** → click some dots → scores change instantly.
-7. Go to **History & log** → your rating changes are logged.
-8. Press **⌘⇧L** (Mac) / **Ctrl+Shift+L** (Windows) → quick capture opens → type a note mentioning the member's first name → save → check **Capture inbox**.
-9. **The real test:** close the browser completely, reopen the URL, log back in → everything is still there.
-
-### 6.2 👤 Check tenant isolation (2 minutes, worth it)
-1. Open a **private/incognito window** → same URL → create a **second** workspace with a different email.
-2. This second workspace must be **completely empty** — no members, no framework from the first one.
-3. If you can see the first workspace's data here, STOP and tell Claude — that's a critical bug (it isn't expected; the code scopes everything by organization).
-
-**✅ Checkpoint:** data persists across sessions and workspaces can't see each other.
-**🎉 You are live on the internet.** Everything below makes it *better*.
+✅ **VERIFY:** the Vercel URL shows the GrowthMatrix **login page**.
 
 ---
 
-## Phase 7 — Custom domain (optional)
+## Phase 4 — Smoke-test the live app
 
-1. 👤 Buy a domain anywhere (Namecheap, Cloudflare, GoDaddy — ~$10/yr).
-2. 👤 In Vercel: your project → **Settings** → **Domains** → **Add** → type `yourdomain.com`.
-3. 👤 Vercel shows you 1–2 DNS records (an `A` record and/or `CNAME`). Copy them.
-4. 👤 In your domain registrar's DNS settings, add exactly those records.
-5. Wait 5–30 minutes. Vercel's Domains page turns green and issues HTTPS automatically.
+### 4.1 🤖 Automated checks (substitute your real URL)
+```bash
+URL=https://YOURDOMAIN
+curl -sI $URL/login | grep -iE "content-security-policy|strict-transport|x-frame-options"
+for p in /login /signup /terms /privacy /dpa; do
+  echo "$p -> $(curl -s -o /dev/null -w '%{http_code}' $URL$p)"
+done
+echo "protected: $(curl -s -o /dev/null -w '%{http_code}' $URL/app)"          # expect 307
+echo "api guard: $(curl -s -o /dev/null -w '%{http_code}' $URL/api/account/export)"  # expect 401
+```
+✅ **VERIFY:** three security headers present · five `200`s · `307` · `401`.
 
-**✅ Checkpoint:** `https://yourdomain.com` shows the login page with a padlock.
+### 4.2 👤 Walk the product once, in a browser
+1. **Create a workspace** — note the signup won't submit until you tick the Terms box (that's the compliance gate working).
+2. You land on the Team page. Click **Load PM starter framework**.
+3. **+ Add member** → add someone with a role + level → they appear in the table.
+4. Click them → **Profile** renders with a radar chart.
+5. **Skills (rate)** → click dots → scores change instantly.
+6. **History & log** → your rating changes are listed.
+7. Press **⌘⇧L** (Mac) / **Ctrl+Shift+L** → quick capture → mention the member's first name → save → check **Capture inbox**.
+8. Avatar menu → **Account & privacy** → **Download my data** → a JSON file downloads containing your org.
+9. Close the browser entirely, reopen, log back in — everything is still there.
 
----
+### 4.3 👤 Verify tenant isolation (2 minutes, do not skip)
+Open a **private/incognito** window → create a **second** workspace with a different email.
+✅ **VERIFY:** it is completely empty — no members, no framework. If you can see the first
+workspace's data, stop and report it.
 
-## Phase 8 — Password reset emails (strongly recommended)
-
-**Why:** right now a user who forgets their password is locked out forever.
-
-### 8.1 👤 Create a Resend account
-1. Go to **https://resend.com** → sign up (free tier: 100 emails/day, plenty).
-2. **API Keys** → **Create API Key** → name `growthmatrix` → copy the key (`re_...`).
-3. If you did Phase 7: **Domains** → **Add Domain** → follow the DNS steps so emails come
-   from `noreply@yourdomain.com`. If you skipped Phase 7, you can send from
-   `onboarding@resend.dev` for testing only.
-4. In Vercel → project → **Settings** → **Environment Variables**, add:
-   - `RESEND_API_KEY` = your key
-   - `EMAIL_FROM` = `GrowthMatrix <noreply@yourdomain.com>` (or `onboarding@resend.dev`)
-   - `APP_URL` = your live URL, e.g. `https://yourdomain.com` (no trailing slash)
-
-> ⏸ **STOP** — Claude needs to know these three env vars are set in Vercel (and needs the
-> values added to local `.env` for testing) before building.
-
-### 8.2 🤖 Build it (implementation spec)
-This is a coding task. Follow the repo's existing conventions (see `src/app/api/auth/*`,
-`src/app/(auth)/*`, `src/lib/*`). Steps:
-
-1. `npm install resend`
-2. **Schema** — add to `prisma/schema.prisma`:
-   ```prisma
-   model PasswordResetToken {
-     id        String   @id @default(cuid())
-     tokenHash String   @unique          // sha256 of the token; never store raw
-     userId    String
-     user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-     expiresAt DateTime
-     usedAt    DateTime?
-     createdAt DateTime @default(now())
-     @@index([userId])
-   }
-   ```
-   and `resetTokens PasswordResetToken[]` on `User`. Then:
-   `npx prisma migrate dev --name password_reset_tokens`
-3. **Mailer** — `src/lib/email.ts`: thin wrapper around Resend's SDK,
-   `sendPasswordResetEmail(to, resetUrl)` with a plain, decent-looking HTML body.
-4. **API** `POST /api/auth/forgot` `{email}`:
-   - Always return `{ok:true}` (never reveal whether the email exists).
-   - If the user exists: generate 32 random bytes (hex), store the **sha256 hash** with
-     `expiresAt = now + 1h`, email the link `${APP_URL}/reset-password?token=<raw>`.
-5. **API** `POST /api/auth/reset` `{token, password}`:
-   - Hash the token, look it up; reject if missing/expired/used (`400`, generic message).
-   - Validate password ≥ 8 chars. Update `passwordHash` (reuse `hashPassword`),
-     set `usedAt`, delete the user's other outstanding tokens.
-6. **Pages** (match the existing `AuthForm` visual style):
-   - `/forgot-password` — email field → posts to forgot → always shows
-     "If that email has an account, we sent a reset link."
-   - `/reset-password` — reads `?token=`, two password fields → posts to reset →
-     success links to `/login`.
-   - Add a "Forgot password?" link on the login form.
-7. **Verify:** `npx tsc --noEmit` → 0 errors; `npm run build` → succeeds; then locally run
-   the flow end-to-end (with real `RESEND_API_KEY` in `.env`) and confirm the email arrives
-   and the new password works.
-8. Commit + push → Vercel auto-deploys.
-
-**✅ Checkpoint:** 👤 On the live site: "Forgot password?" → receive email → set new
-password → log in with it.
+🎉 **You are live.** Everything below hardens and monetizes it.
 
 ---
 
-## Phase 9 — Login rate limiting (recommended)
+## Phase 5 — Custom domain
 
-**Why:** without it, a bot can guess passwords all day.
-**Approach:** track failed attempts in Postgres (no new services needed; fine at this scale).
+1. 👤 Buy a domain (Namecheap / Cloudflare, ~$10/yr).
+2. 👤 Vercel → project → **Settings → Domains** → **Add** → your domain.
+3. 👤 Copy the DNS records Vercel shows into your registrar's DNS settings.
+4. 👤 Wait 5–30 min → Vercel turns green and issues HTTPS automatically.
+5. 👤 Update the `APP_URL` env var to the new domain → **Redeploy**.
+   *(Email links use `APP_URL`; if it's stale, reset links point at the wrong host.)*
 
-### 9.1 🤖 Build it (implementation spec)
-1. **Schema** — add:
-   ```prisma
-   model LoginAttempt {
-     id        String   @id @default(cuid())
-     key       String                     // lowercased email
-     createdAt DateTime @default(now())
-     @@index([key, createdAt])
-   }
-   ```
-   `npx prisma migrate dev --name login_attempts`
-2. In `POST /api/auth/login`, **before** checking the password:
-   - Count `LoginAttempt` rows for this email in the last 15 minutes.
-   - If ≥ 5 → return `429` `{error:"Too many attempts. Try again in 15 minutes."}`.
-   - On **failed** login → insert a row. On **success** → delete the email's rows.
-3. Show the 429 message in the login form (it already displays API `error` strings).
-4. Best-effort cleanup: when inserting, also delete rows older than 1 day for that key.
-5. Verify: 5 wrong passwords → 6th attempt returns 429 even with the *correct* password;
-   after 15 min (or after deleting the rows manually) login works. `tsc` + build pass.
-   Commit + push.
-
-**✅ Checkpoint:** hammering the login form locks the account name for 15 minutes.
+✅ **VERIFY:** `https://yourdomain.com` loads with a padlock.
 
 ---
 
-## Phase 10 — What to build next (in order of value)
+## Phase 6 — Email delivery (required before real users)
 
-These are larger features. Each can be given to Claude as its own task; one PR each.
+Until this is set, verification and password-reset links are only written to the server log —
+so a locked-out user stays locked out.
 
-1. **Invite other managers** — an `Invitation` model (email, token, orgId, role, expiresAt),
-   "Invite teammate" button in the header menu, email via Resend, `/accept-invite` page that
-   creates a `User` in the **existing** org. Unlocks: multiple managers per workspace.
-2. **Member self-assessment portal** — give `Member` an optional login (or magic link),
-   a stripped-down view where they rate only their own skills into `Score.self`.
-   Unlocks: the Self-vs-manager screen fills itself.
-3. **Billing (Stripe)** — `stripeCustomerId` + `plan` on `Organization`, Stripe Checkout
-   for a monthly plan, webhook → set plan, gate "Add member" above N members on free tier.
-   Use Stripe's test mode first.
-4. **Review cycles that actually snapshot** — "Close cycle" copies all current scores into
-   a `ScoreSnapshot` table; trend arrows then compare live vs. last snapshot.
-5. **CSV import/export** — import members/skills from a spreadsheet; export any table.
-6. **Slack capture** — a Slack app whose message-shortcut posts into `/api/inbox`.
+### 6.1 👤 Resend setup
+1. **https://resend.com** → sign up (free: 100 emails/day).
+2. **Domains → Add Domain** → your domain → add the SPF/DKIM DNS records at your registrar → wait for **Verified**.
+3. **API Keys → Create API Key** → copy it (`re_…`).
+4. Vercel → **Settings → Environment Variables**:
+   - `RESEND_API_KEY` = the key
+   - `EMAIL_FROM` = `GrowthMatrix <no-reply@yourdomain.com>` *(the domain after @ must be the verified one)*
+5. **Redeploy**.
+
+✅ **VERIFY:** 👤 On the live site: **Forgot your password?** → the email arrives (check spam) →
+the link opens the reset page → set a new password → sign in with it. Then confirm the **old**
+password no longer works.
 
 ---
 
-## Appendix — Things that keep you out of trouble
+## Phase 7 — Automated weekly backups
 
-- **Never commit `.env`.** It's git-ignored; keep it that way. Secrets live in Vercel env vars.
-- **Rotate that GitHub token** (Phase 1.2) after setup: GitHub → Settings → Tokens → delete.
-- **Backups:** Neon keeps point-in-time restore even on the free tier (Dashboard → Branches →
-  Restore). For extra safety: `pg_dump "$DIRECT_URL" > backup.sql` occasionally.
-- **Schema changes:** always `npx prisma migrate dev --name <what_changed>` locally, commit the
-  new folder in `prisma/migrations/`, push — Vercel applies it on deploy automatically.
-- **Logs:** Vercel dashboard → your project → **Logs** shows every server error live.
-- **It's down / weird:** Vercel → Deployments → click the previous good deployment →
-  **⋯ → Promote to Production** = instant rollback (DB schema rollbacks are *not* automatic —
-  that's why migrations stay additive when possible).
+The workflow already exists at `.github/workflows/backup.yml`; it needs one secret.
+
+1. 👤 GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**
+   - Name: `DIRECT_URL` · Value: the **direct** Neon connection string.
+2. 👤 **Actions** tab → **Weekly DB backup** → **Run workflow** (manual first run).
+
+✅ **VERIFY:** the run goes green and a `db-backup-…` artifact appears. It then runs every
+Monday and keeps 90 days.
+
+> Neon also has point-in-time restore built in (Dashboard → Branches → Restore).
+
+---
+
+## Phase 8 — Legal & compliance switch-on
+
+The technical work is done. These are the human decisions.
+
+- [ ] 👤 **Have a lawyer review `/terms` and `/privacy` before serious marketing spend.** They are solid, product-specific drafts — not legal advice.
+- [ ] 👤 Fill the placeholders: governing law/venue (Terms §12) and subscription terms (§6). Edit `src/app/(legal)/terms/page.tsx`.
+- [ ] 👤 Set `COMPANY_NAME`, `COMPANY_CONTACT_EMAIL` (and `COMPANY_ADDRESS`) in Vercel to your real entity. If you form a company later, update these and Stripe.
+- [ ] 👤 **EU/UK:** if you have no EU establishment, GDPR Art. 27 may require an EU representative (and a UK one). Ask the lawyer.
+- [ ] 👤 **Turkey (KVKK):** if you process data in Turkey at scale, check whether **VERBİS** registration applies to you.
+- [ ] ✅ Confirm on the live site: `/terms`, `/privacy`, `/dpa` load; signup blocks without consent; **Download my data** returns your org's JSON; **Delete account** asks for the password and works.
+- [ ] ✅ Cookies: the app sets exactly one strictly-necessary session cookie, so no consent banner is needed. **If you ever add analytics or ads, add a consent banner first.**
+- [ ] ✅ Email: only transactional mail is sent (verification, reset). Marketing requires the separate opt-in that's already collected at signup — honour it.
+- [ ] 👤 **Japan (optional):** if you sell there, ask about a 特定商取引法 (Specified Commercial Transactions Act) disclosure page.
+
+**Security posture you already have:** bcrypt(12) · single-use expiring hashed tokens ·
+session revocation on password reset · login lockout · CSP/HSTS/XFO/nosniff ·
+org-scoped queries on every route · HTML-escaped email templates · secrets server-side only ·
+GDPR export & erasure · audit logging · `npm audit` clean · CI on every push.
+
+---
+
+## Phase 9 — Billing with Stripe
+
+Only when you're ready to charge. This is the one substantial feature still to build.
+
+### 9.1 👤 Stripe test mode
+1. **https://stripe.com** → sign up. Keep the **Test mode** toggle ON.
+2. **Product catalogue → Add product**: `GrowthMatrix Pro`, two recurring prices (monthly + yearly). Copy both price IDs (`price_…`).
+3. **Developers → API keys** → copy the **Secret key** (`sk_test_…`).
+4. **Settings → Customer portal → Activate** (this is how customers cancel — skipping it breaks cancellation).
+
+### 9.2 🤖 Build it
+Give an agent this scope, as its own task:
+- `stripeCustomerId`, `plan`, `subscriptionStatus` on `Organization` (+ migration).
+- `POST /api/billing/checkout` → Stripe Checkout session for the chosen price.
+- `POST /api/billing/webhook` → **signature-verified**; handle `customer.subscription.created|updated|deleted` → update the org's plan.
+- `POST /api/billing/portal` → Customer Portal session; link it from the avatar menu.
+- A free-tier limit (e.g. 5 members) enforced **server-side** in `POST /api/members`, with an upgrade prompt in the UI.
+
+### 9.3 👤 Go live with real money
+1. Complete Stripe **business activation** (identity + bank account).
+2. Switch to **Live mode** and redo: product + prices, secret key, **activate the Customer portal again** (it is configured per-mode), and create the live webhook endpoint → copy its signing secret.
+3. Update the Stripe env vars in Vercel → Redeploy.
+
+✅ **VERIFY:** subscribe with a real card on the cheapest plan, confirm the account flips to Pro,
+then cancel via the customer portal. It's the only true test of live mode.
+
+---
+
+## Phase 10 — What to build next
+
+1. **Invite other managers** — an `Invitation` model + emailed token + `/accept-invite` that adds a `User` to the *existing* org. (The schema already supports multiple users and an `OWNER`/`MANAGER` role.)
+2. **Team-member logins** — let the people being evaluated fill their own self-assessment into `Score.self`; the Self-vs-manager screen then fills itself.
+3. **Admin console** — `ADMIN_EMAILS` already marks owners; build `/admin` for customer lookup, suspend/unsuspend (`User.suspendedAt` is enforced at login), GDPR requests, and the audit-log viewer.
+4. **Cycle snapshots** — "Close cycle" copies scores into a snapshot table so trends compare real history.
+5. **CSV import/export** and the **Slack** capture integration (both currently honest stubs).
+
+---
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Nobody receives email | `RESEND_API_KEY` unset, or `EMAIL_FROM` domain ≠ verified domain | Phase 6; check Resend logs |
+| Reset link goes to the wrong host | `APP_URL` stale after adding a domain | update it in Vercel → Redeploy |
+| 500 on every page | `DATABASE_URL` / `DIRECT_URL` wrong | Vercel → Logs; re-copy from Neon |
+| Build fails: "Cannot find module for page: /_not-found" | a `next dev` is sharing `.next` | `pkill -f "next dev"`, `rm -rf .next`, rebuild |
+| Login returns 429 | lockout working (5 fails / 15 min) | wait 15 min, or clear `LoginAttempt` rows |
+| Everyone logged out at once | `AUTH_SECRET` was changed | expected; it invalidates all cookies |
+| Users still signed in after a password reset | shouldn't happen — `authed()` uses `getVerifiedSession()` | re-run the Phase 4.1 checks and report |
+| Signup won't submit | the Terms checkbox is required | that's the compliance gate |
+| CI red on a commit | quality gate failed | open Actions → read the failing step → fix → push |
+
+## Day-to-day operations
+
+- **Schema change:** `npx prisma migrate dev --name what_changed` → commit `prisma/migrations/` → push. Vercel applies it on deploy.
+- **Rollback:** Vercel → Deployments → previous good one → **⋯ → Promote to Production**. (DB migrations don't roll back — keep them additive.)
+- **Watch:** Vercel → Logs (500s) · Resend → bounces · GitHub → Actions (CI + backups).
+- **Monthly:** `npm audit`, take non-breaking updates, let CI verify.
