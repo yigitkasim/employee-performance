@@ -87,17 +87,17 @@ function Chrome({ data, children }: { data: ChromeData; children: React.ReactNod
               {data.orgName}
             </span>
             <span className="text-slate-300">/</span>
-            <select
-              defaultValue={data.cycles.find((c) => c.active)?.id}
-              className="text-sm bg-transparent border border-slate-200 rounded-md px-2 py-1"
+            {/* Shown as a label, not a picker: scores are not yet snapshotted
+                per cycle, so offering a switcher would imply filtering that
+                doesn't happen. */}
+            <span
+              className="text-sm border border-slate-200 rounded-md px-2 py-1 text-slate-600"
+              title="The review cycle currently in progress"
             >
-              {data.cycles.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                  {c.active ? "" : " (closed)"}
-                </option>
-              ))}
-            </select>
+              {data.cycles.find((c) => c.active)?.name ??
+                data.cycles[0]?.name ??
+                "Current cycle"}
+            </span>
           </div>
           <div className="flex items-center gap-2 text-sm relative">
             <button
