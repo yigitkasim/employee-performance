@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -19,6 +20,7 @@ import {
   firstName,
 } from "@/lib/compute";
 import type { MemberWithScores } from "@/lib/data";
+import { ManageMemberModal, type RoleOption } from "./ManageMemberModal";
 
 export type GoalItem = { id: string; text: string; due: string; done: boolean };
 export type LogItem = {
@@ -35,14 +37,17 @@ export function ProfileClient({
   members,
   goals,
   logs,
+  roles,
 }: {
   member: MemberWithScores;
   members: { id: string; name: string }[];
   goals: GoalItem[];
   logs: LogItem[];
+  roles: RoleOption[];
 }) {
   const router = useRouter();
   const toast = useToast();
+  const [managing, setManaging] = useState(false);
 
   const avg = avgOf(member.scores);
   const target = targetOf(member.scores);
@@ -110,6 +115,13 @@ export function ProfileClient({
           >
             Rate skills
           </Link>
+          <button
+            onClick={() => setManaging(true)}
+            className="text-sm border border-slate-200 rounded-md px-3 py-1.5 hover:bg-slate-50"
+            title="Edit details, role and level, or remove this member"
+          >
+            Manage
+          </button>
           <Link
             href={`/app/one-on-one?member=${member.id}`}
             className="text-sm border border-slate-200 rounded-md px-3 py-1.5 hover:bg-slate-50"
@@ -313,6 +325,21 @@ export function ProfileClient({
           </Link>
         </Card>
       </div>
+
+      {managing && (
+        <ManageMemberModal
+          member={{
+            id: member.id,
+            name: member.name,
+            title: member.title,
+            status: member.status,
+            roleId: member.roleId,
+            levelId: member.levelId,
+          }}
+          roles={roles}
+          onClose={() => setManaging(false)}
+        />
+      )}
     </>
   );
 }

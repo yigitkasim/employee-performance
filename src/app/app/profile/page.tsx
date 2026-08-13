@@ -5,6 +5,7 @@ import {
   getMemberOptions,
   getMemberExtras,
   getLogs,
+  getFramework,
 } from "@/lib/data";
 import { NoMembers } from "@/components/NoMembers";
 import { ProfileClient } from "@/components/profile/ProfileClient";
@@ -21,11 +22,19 @@ export default async function ProfilePage({
   const m = await resolveMember(session.orgId, memberId);
   if (!m) return <NoMembers what="their profile" />;
 
-  const [members, extras, logs] = await Promise.all([
+  const [members, extras, logs, framework] = await Promise.all([
     getMemberOptions(session.orgId),
     getMemberExtras(m.id, session.userId),
     getLogs(session.orgId, m.id),
+    getFramework(session.orgId),
   ]);
+
+  const roles = framework.roles.map((r) => ({
+    id: r.id,
+    name: r.name,
+    icon: r.icon,
+    levels: r.levels.map((l) => ({ id: l.id, name: l.name })),
+  }));
 
   const goals = extras.goals.map((g) => ({
     id: g.id,
@@ -50,6 +59,7 @@ export default async function ProfilePage({
       members={members}
       goals={goals}
       logs={recentLogs}
+      roles={roles}
     />
   );
 }
