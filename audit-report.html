@@ -239,13 +239,14 @@
     <h1>GrowthMatrix satışa hazırlık denetimi</h1>
     <p class="standfirst">
       Uygulamanın uçtan uca çalışırlığı, güvenliği ve beş yargı bölgesinde
-      (AB, Birleşik Krallık, Türkiye, ABD, Kanada) satışa uygunluğu incelendi.
-      Bulunan eksikler bu turda giderildi.
+      (AB, Birleşik Krallık, Türkiye, ABD, Kanada) satışa uygunluğu incelendi —
+      biri bağımsız bir denetim ajanı tarafından. Bulunan yedi sorunun
+      tamamı bu turda kapatıldı.
     </p>
     <div class="byline">
       <span>13 Ağustos 2026</span>
       <span>Next.js 15 · Prisma · PostgreSQL</span>
-      <span>8 commit · 120 dosya</span>
+      <span>9 commit · 126 dosya</span>
     </div>
   </header>
 
@@ -253,7 +254,7 @@
     <div class="stat good"><span class="n">13</span><span class="l">Ekranın tamamı çalışıyor</span></div>
     <div class="stat good"><span class="n">36</span><span class="l">API route'u</span></div>
     <div class="stat good"><span class="n">0</span><span class="l">Güvenlik açığı (npm audit)</span></div>
-    <div class="stat good"><span class="n">15/15</span><span class="l">Kiracı sızıntı testi reddedildi</span></div>
+    <div class="stat good"><span class="n">2</span><span class="l">Kritik açık bulundu ve kapatıldı</span></div>
   </div>
 
   <section>
@@ -285,17 +286,19 @@
 
     <div class="cards">
       <div class="card">
-        <div class="head"><h3>Kiracı izolasyonu</h3><span class="pill pass">Geçti</span></div>
+        <div class="head"><h3>Kiracı izolasyonu</h3><span class="pill pass">Düzeltmeden sonra geçti</span></div>
         <p>
-          B organizasyonundan A'nın verilerine 15 farklı yazma denemesi yapıldı
-          (üye, skor, öz-değerlendirme, simülatör, özel not, hedefler, roller,
-          seviyeler, yetenek grupları, beklenti matrisi). Hepsi reddedildi,
-          A'nın verisi bit düzeyinde değişmedi, B'nin veri indirmesinde A'dan
-          tek satır çıkmadı.
+          Benim ilk turumda B organizasyonundan A'nın verilerine URL üzerinden
+          15 yazma denemesi yapıldı, hepsi reddedildi. <strong>Ama bu eksik bir
+          testti.</strong> Bağımsız denetim, id'lerin istek gövdesinden de
+          geçtiğini ve orada hiç doğrulanmadığını buldu — aşağıda "kritik" olarak
+          işaretli. Düzeltmeden sonra dört saldırı varyantı da 404 döndürüyor ve
+          veritabanında sıfır çapraz bağ var.
         </p>
-        <div class="ev">PATCH member → 404   DELETE member → 404   PATCH score → 404
-PUT note   → 404   PATCH role   → 404   PUT expected → 404
-A'nın verisi: "Alice Secret" · "Secret goal" · 5 yetenek grubu — değişmedi</div>
+        <div class="ev">gövdede B'nin roleId'si → 404 "Role not found"
+gövdede B'nin levelId'si → 404 "Level not found"
+gövdede B'nin subSkillId'si → 404 "Sub-skill not found"
+DB kontrolü: çapraz üye=0  çapraz skor=0</div>
       </div>
 
       <div class="card">
@@ -355,6 +358,39 @@ oturum kapandı → /app 307 · AuditLog "account.delete" korundu</div>
     <p>Hepsi gerçek hatalardı; hepsi bu turda kapatıldı.</p>
     <div class="cards">
       <div class="card">
+        <div class="head"><h3>Kiracılar arası veri sızıntısı ve veri imhası</h3><span class="pill block">Kritik</span></div>
+        <p>
+          <strong>Bağımsız denetimin bulduğu, benim kaçırdığım açık.</strong>
+          URL'deki id'leri doğruluyorduk ama <strong>istek gövdesinden gelen</strong>
+          <span style="font-family:var(--mono);font-size:.85em">roleId</span>,
+          <span style="font-family:var(--mono);font-size:.85em">levelId</span> ve
+          <span style="font-family:var(--mono);font-size:.85em">subSkillId</span>
+          hiç kontrol edilmiyordu. A organizasyonu, B'nin rol id'sini göndererek
+          kendi üyesini B'nin çerçevesine bağlayabiliyordu. Sonuç: B'nin gizli
+          rol ve yetenek isimleri A'nın ekranında canlı görünüyor, B'nin üye
+          sayısı A'nın üyeleriyle şişiyor ve en kötüsü — B kendi yetenek grubunu
+          sildiğinde <strong>A'nın puanları sessizce yok oluyordu</strong>
+          (gözlemlenen: 88 satır → 79).
+        </p>
+        <p>
+          Kök neden, üye skorlarını hazırlayan sorgunun org filtresi olmadan
+          çalışmasıydı. Tüm gövde id'leri için org kapsamlı doğrulama katmanı
+          eklendi, kök neden düzeltildi ve tekrarını önlemek için 8 regresyon
+          testi yazıldı.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="head"><h3>Beklenti matrisi ve simülatör aynı açığı taşıyordu</h3><span class="pill block">Kritik</span></div>
+        <p>
+          Matris yazma işlemi yalnızca rolü doğruluyor, seviye ve alt-yetenek
+          id'lerini olduğu gibi kabul ediyordu; simülatör de yabancı bir
+          alt-yetenek için kayıt yazabiliyordu. Üçü de artık org kapsamlı
+          doğrulanıyor.
+        </p>
+      </div>
+
+      <div class="card">
         <div class="head"><h3>Çalınmış çerez parola sıfırlamadan sonra da geçerliydi</h3><span class="pill block">Kritik</span></div>
         <p>
           API guard'ı yalnızca JWT imzasına bakıyordu, iptal durumuna değil. Yani
@@ -396,6 +432,26 @@ oturum kapandı → /app 307 · AuditLog "account.delete" korundu</div>
           JWT'nin zaman damgası saniyeye yuvarlandığı için, oturum doğrulaması
           taze girişleri bazen geçersiz sayıyordu. Bir saniyelik tolerans
           eklendi.
+        </p>
+      </div>
+      <div class="card">
+        <div class="head"><h3>Gözlem kaydetmek uydurma puan geçmişi yazıyordu</h3><span class="pill warn">Veri bütünlüğü</span></div>
+        <p>
+          Gelen kutusundan bir gözlem dosyalandığında, kayıt tablosu puan zorunlu
+          kıldığı için sisteme <span style="font-family:var(--mono);font-size:.85em">3 → 3</span>
+          yazılıyordu — gerçek puanı 1 olan bir kişi için bile. Puan alanları
+          artık opsiyonel: gözlem, hiçbir puan iddiası olmadan kaydediliyor.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="head"><h3>Hidrasyon uyuşmazlığı ve sahte "yayınlandı" bildirimi</h3><span class="pill warn">Düzeltildi</span></div>
+        <p>
+          Göreli zaman etiketleri ("2 saat önce") sunucu ve tarayıcıda farklı
+          hesaplanıp React ağacını bozabiliyordu; ayrı bir bileşene taşındı.
+          Çerçeve ekranındaki "Yayınla" butonu ise hiçbir şey yapmadan başarı
+          bildirimi veriyordu — ekran zaten anında kaydettiği için buton
+          kaldırıldı.
         </p>
       </div>
     </div>
@@ -493,7 +549,7 @@ oturum kapandı → /app 307 · AuditLog "account.delete" korundu</div>
   </section>
 
   <footer>
-    Kalite kapısı: typecheck 0 hata · lint temiz · 13 test geçti · npm audit 0 açık · üretim derlemesi başarılı.
+    Kalite kapısı: typecheck 0 hata · lint temiz · 21 test geçti · npm audit 0 açık · üretim derlemesi başarılı.
     Sürekli entegrasyon ve haftalık yedekleme iş akışları depoda hazır.
   </footer>
 
