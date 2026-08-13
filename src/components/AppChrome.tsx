@@ -123,6 +123,13 @@ function Chrome({ data, children }: { data: ChromeData; children: React.ReactNod
                   <div className="font-medium text-sm truncate">{data.userName}</div>
                   <div className="text-xs text-slate-500 truncate">{data.orgName}</div>
                 </div>
+                <Link
+                  href="/app/account"
+                  onClick={() => setMenuOpen(false)}
+                  className="block px-3 py-2 text-sm hover:bg-slate-50 text-slate-700"
+                >
+                  Account &amp; privacy
+                </Link>
                 <button
                   onClick={logout}
                   className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 text-slate-700"

@@ -85,7 +85,14 @@ export async function getVerifiedSession(): Promise<SessionPayload | null> {
     select: { suspendedAt: true, sessionsValidFrom: true, orgId: true },
   });
   if (!user || user.suspendedAt) return null;
-  if (session.iat && user.sessionsValidFrom.getTime() > session.iat * 1000) {
+  // `iat` is whole seconds (rounded down), so a token minted in the same second
+  // as `sessionsValidFrom` can look marginally older. Allow one second of slack
+  // so a fresh login is never rejected by its own revocation timestamp.
+  const IAT_SKEW_MS = 1000;
+  if (
+    session.iat &&
+    user.sessionsValidFrom.getTime() - IAT_SKEW_MS > session.iat * 1000
+  ) {
     return null; // issued before a global revocation
   }
   if (user.orgId !== session.orgId) return null;
