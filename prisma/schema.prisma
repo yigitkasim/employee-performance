@@ -1,0 +1,364 @@
+// GrowthMatrix — SaaS data model
+// Multi-tenant: every domain row is scoped to an Organization.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────── Tenancy & auth ───────────────────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  users       User[]
+  cycles      Cycle[]
+  jobRoles    JobRole[]
+  skillGroups SkillGroup[]
+  members     Member[]
+  inboxItems  InboxItem[]
+
+  // Inbox source-integration toggles, stored as JSON.
+  sources Json @default("{}")
+}
+
+enum OrgRole {
+  OWNER
+  MANAGER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         OrgRole  @default(OWNER)
+  createdAt    DateTime @default(now())
+
+  // ─── Compliance / auth lifecycle ───
+  emailVerifiedAt DateTime? // null = unverified
+  // Explicit consent captured at signup (GDPR Art. 7 / KVKK Art. 5 accountability)
+  termsAcceptedAt DateTime?
+  // Optional separate opt-in — required for marketing email (GDPR / CAN-SPAM / CASL)
+  marketingOptIn  Boolean   @default(false)
+  suspendedAt     DateTime?
+  // Invalidates all sessions issued before this instant (password reset, sign-out-everywhere)
+  sessionsValidFrom DateTime @default(now())
+
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  logEntries LogEntry[]
+  notes      MemberNote[]
+  tokens     AuthToken[]
+  auditLogs  AuditLog[]  @relation("AuditActor")
+
+  @@index([orgId])
+}
+
+enum TokenPurpose {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+/// Single-use, expiring tokens. Only the SHA-256 hash is stored, never the raw token.
+model AuthToken {
+  id        String       @id @default(cuid())
+  tokenHash String       @unique
+  purpose   TokenPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime     @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+}
+
+/// Failed-login tracking for rate limiting / account lockout.
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  key       String // lowercased email
+  ip        String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}
+
+/// Records privileged/compliance-relevant actions (GDPR accountability).
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String // e.g. "data.export", "account.delete", "password.reset"
+  detail    String   @default("")
+  createdAt DateTime @default(now())
+
+  actorId String?
+  actor   User?   @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+}
+
+// Review cycle, e.g. "H1 2026".
+model Cycle {
+  id     String  @id @default(cuid())
+  name   String
+  active Boolean @default(true)
+
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+}
+
+// ─────────────────────────── Framework: roles, levels, skills ───────────────────────────
+
+model JobRole {
+  id          String @id @default(cuid())
+  name        String
+  icon        String @default("📦")
+  description String @default("")
+  orderIndex  Int    @default(0)
+
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  levels      Level[]
+  members     Member[]
+  expected    ExpectedScore[]
+  skillGroups SkillGroupOnRole[]
+
+  @@index([orgId])
+}
+
+model Level {
+  id         String @id @default(cuid())
+  name       String
+  orderIndex Int    @default(0)
+
+  roleId String
+  role   JobRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  members  Member[]
+  expected ExpectedScore[]
+
+  @@index([roleId])
+}
+
+model SkillGroup {
+  id         String @id @default(cuid())
+  name       String
+  icon       String @default("💬")
+  orderIndex Int    @default(0)
+
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  subSkills SubSkill[]
+  roles     SkillGroupOnRole[]
+
+  @@index([orgId])
+}
+
+model SubSkill {
+  id         String @id @default(cuid())
+  name       String
+  orderIndex Int    @default(0)
+
+  groupId String
+  group   SkillGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  scores   Score[]
+  expected ExpectedScore[]
+
+  @@index([groupId])
+}
+
+// Join table: skill group ↔ role (many-to-many).
+model SkillGroupOnRole {
+  groupId String
+  roleId  String
+  group   SkillGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  role    JobRole    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, roleId])
+  @@index([roleId])
+}
+
+// Expected-score matrix: for a (role, level, sub-skill), the target score 1–5.
+model ExpectedScore {
+  id    String @id @default(cuid())
+  value Int    @default(3)
+
+  roleId     String
+  role       JobRole  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  levelId    String
+  level      Level    @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  subSkillId String
+  subSkill   SubSkill @relation(fields: [subSkillId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, levelId, subSkillId])
+  @@index([roleId])
+  @@index([levelId])
+  @@index([subSkillId])
+}
+
+// ─────────────────────────── People being evaluated ───────────────────────────
+
+enum MemberStatus {
+  ON_TRACK
+  PROMO_READY
+  GROWING
+  NEEDS_ATTENTION
+}
+
+model Member {
+  id        String       @id @default(cuid())
+  name      String
+  title     String       @default("")
+  initials  String       @default("")
+  color     String       @default("bg-indigo-600")
+  status    MemberStatus @default(ON_TRACK)
+  createdAt DateTime     @default(now())
+
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  roleId  String?
+  role    JobRole? @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  levelId String?
+  level   Level?   @relation(fields: [levelId], references: [id], onDelete: SetNull)
+
+  scores        Score[]
+  logEntries    LogEntry[]
+  goals         Goal[]
+  talkingPoints TalkingPoint[]
+  checklist     ChecklistItem[]
+  notes         MemberNote[]
+  simValues     SimValue[]
+  inboxItems    InboxItem[]
+
+  @@index([orgId])
+  @@index([roleId])
+}
+
+// A member's current (manager-rated) and expected score for a sub-skill.
+model Score {
+  id       String @id @default(cuid())
+  current  Int    @default(1)
+  expected Int    @default(3)
+  self     Int? // member's self-assessment (Self vs manager screen)
+
+  memberId   String
+  member     Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  subSkillId String
+  subSkill   SubSkill @relation(fields: [subSkillId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, subSkillId])
+  @@index([memberId])
+  @@index([subSkillId])
+}
+
+// ─────────────────────────── Activity ───────────────────────────
+
+model LogEntry {
+  id        String   @id @default(cuid())
+  skillName String
+  fromScore Int
+  toScore   Int
+  note      String
+  createdAt DateTime @default(now())
+
+  memberId String
+  member   Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  authorId String?
+  author   User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([memberId])
+}
+
+model InboxItem {
+  id        String   @id @default(cuid())
+  source    String   @default("⌨ Quick")
+  text      String
+  skillName String?
+  createdAt DateTime @default(now())
+
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  memberId String?
+  member   Member? @relation(fields: [memberId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+}
+
+model Goal {
+  id         String  @id @default(cuid())
+  text       String
+  due        String  @default("")
+  done       Boolean @default(false)
+  orderIndex Int     @default(0)
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+}
+
+model TalkingPoint {
+  id       String  @id @default(cuid())
+  text     String
+  checked  Boolean @default(false)
+  isCustom Boolean @default(false)
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+}
+
+model ChecklistItem {
+  id      String  @id @default(cuid())
+  label   String
+  checked Boolean @default(true)
+
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+}
+
+model MemberNote {
+  id        String   @id @default(cuid())
+  body      String   @default("")
+  updatedAt DateTime @updatedAt
+
+  memberId String
+  member   Member  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  authorId String?
+  author   User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@unique([memberId, authorId])
+  @@index([memberId])
+}
+
+// Growth-simulator saved target values (per member, per sub-skill).
+model SimValue {
+  id    String @id @default(cuid())
+  value Int
+
+  memberId   String
+  member     Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  subSkillId String
+
+  @@unique([memberId, subSkillId])
+  @@index([memberId])
+}
