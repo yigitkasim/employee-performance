@@ -90,12 +90,11 @@ export function FrameworkClient({
             >
               Import CSV
             </button>
-            <button
-              onClick={() => toast("Framework published")}
-              className="text-sm bg-indigo-600 text-white rounded-md px-3 py-1.5"
-            >
-              Publish framework
-            </button>
+            {/* Every edit on this screen saves immediately, so there is nothing
+                to publish — say so rather than claiming a save that never ran. */}
+            <span className="text-xs text-slate-500 px-2">
+              Changes save automatically
+            </span>
           </>
         }
       />

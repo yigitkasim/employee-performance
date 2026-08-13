@@ -10,9 +10,9 @@ import { firstName, type Gap } from "@/lib/compute";
 type LogRow = {
   id: string;
   date: string;
-  skillName: string;
-  fromScore: number;
-  toScore: number;
+  skillName: string | null;
+  fromScore: number | null;
+  toScore: number | null;
   note: string;
 };
 

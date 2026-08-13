@@ -28,9 +28,9 @@ type ChecklistRow = { id: string; label: string; checked: boolean };
 type Evidence = {
   id: string;
   note: string;
-  skillName: string;
-  fromScore: number;
-  toScore: number;
+  skillName: string | null;
+  fromScore: number | null;
+  toScore: number | null;
   date: string;
 };
 

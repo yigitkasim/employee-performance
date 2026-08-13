@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "LogEntry" ALTER COLUMN "skillName" DROP NOT NULL,
+ALTER COLUMN "fromScore" DROP NOT NULL,
+ALTER COLUMN "toScore" DROP NOT NULL;
