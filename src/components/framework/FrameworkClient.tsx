@@ -153,7 +153,6 @@ export function FrameworkClient({
           {tab === "roles" && (
             <RolesTab
               roles={roles}
-              groups={groups}
               activeRoleId={activeRoleId}
               setActiveRoleId={setActiveRoleId}
               mutate={mutate}
@@ -166,7 +165,6 @@ export function FrameworkClient({
               activeGroupId={activeGroupId}
               setActiveGroupId={setActiveGroupId}
               mutate={mutate}
-              setTab={setTab}
             />
           )}
         </>
@@ -433,13 +431,11 @@ function MatrixGroupRows({
 
 function RolesTab({
   roles,
-  groups,
   activeRoleId,
   setActiveRoleId,
   mutate,
 }: {
   roles: Role[];
-  groups: Group[];
   activeRoleId: string;
   setActiveRoleId: (id: string) => void;
   mutate: (url: string, method: string, body?: unknown) => Promise<unknown>;
@@ -573,14 +569,12 @@ function SkillsTab({
   activeGroupId,
   setActiveGroupId,
   mutate,
-  setTab,
 }: {
   roles: Role[];
   groups: Group[];
   activeGroupId: string;
   setActiveGroupId: (id: string) => void;
   mutate: (url: string, method: string, body?: unknown) => Promise<unknown>;
-  setTab: (t: Tab) => void;
 }) {
   const group = groups.find((g) => g.id === activeGroupId) ?? groups[0];
 

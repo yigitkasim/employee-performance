@@ -9,6 +9,10 @@ const schema = z.object({
   email: z.string().email("Enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   orgName: z.string().min(1, "Organization name is required").max(120),
+  // GDPR Art. 7 / KVKK accountability: consent must be explicit and recorded.
+  acceptTerms: z.boolean().optional(),
+  // Separate, optional opt-in (GDPR / CASL / CAN-SPAM).
+  marketingOptIn: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -26,7 +30,18 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-  const { name, email, password, orgName } = parsed.data;
+  const { name, email, password, orgName, acceptTerms, marketingOptIn } =
+    parsed.data;
+
+  if (acceptTerms !== true) {
+    return NextResponse.json(
+      {
+        error:
+          "You must accept the Terms of Service and Privacy Policy to create an account",
+      },
+      { status: 400 },
+    );
+  }
 
   const existing = await prisma.user.findUnique({
     where: { email: email.toLowerCase() },
@@ -55,6 +70,8 @@ export async function POST(req: NextRequest) {
         passwordHash,
         role: "OWNER",
         orgId: org.id,
+        termsAcceptedAt: new Date(),
+        marketingOptIn: marketingOptIn === true,
       },
     });
   });

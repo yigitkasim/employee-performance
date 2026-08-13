@@ -15,7 +15,12 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
     setError(null);
     setLoading(true);
     const form = new FormData(e.currentTarget);
-    const payload = Object.fromEntries(form.entries());
+    const payload: Record<string, unknown> = Object.fromEntries(form.entries());
+    if (isSignup) {
+      // Checkboxes must go over the wire as real booleans.
+      payload.acceptTerms = form.get("acceptTerms") === "on";
+      payload.marketingOptIn = form.get("marketingOptIn") === "on";
+    }
     try {
       const res = await fetch(`/api/auth/${isSignup ? "signup" : "login"}`, {
         method: "POST",
@@ -76,6 +81,52 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
               placeholder={isSignup ? "At least 8 characters" : "••••••••"}
             />
 
+            {isSignup && (
+              <div className="space-y-2 pt-1">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    name="acceptTerms"
+                    type="checkbox"
+                    required
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-200"
+                  />
+                  <span className="text-xs text-slate-600 leading-relaxed">
+                    I agree to the{" "}
+                    <Link
+                      href="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:underline"
+                    >
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                      href="/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:underline"
+                    >
+                      Privacy Policy
+                    </Link>
+                    .
+                  </span>
+                </label>
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    name="marketingOptIn"
+                    type="checkbox"
+                    defaultChecked={false}
+                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-200"
+                  />
+                  <span className="text-xs text-slate-600 leading-relaxed">
+                    Send me occasional product updates by email. Optional — you
+                    can change this any time in Account &amp; privacy.
+                  </span>
+                </label>
+              </div>
+            )}
+
             {error && (
               <div className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-md px-3 py-2">
                 {error}
@@ -112,6 +163,16 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
               </Link>
             </>
           )}
+        </p>
+
+        <p className="text-center text-xs text-slate-400 mt-6">
+          <Link href="/terms" className="hover:text-slate-600 hover:underline">
+            Terms
+          </Link>
+          <span className="mx-2 text-slate-300">·</span>
+          <Link href="/privacy" className="hover:text-slate-600 hover:underline">
+            Privacy
+          </Link>
         </p>
       </div>
     </div>
