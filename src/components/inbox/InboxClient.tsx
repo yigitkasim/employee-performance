@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/primitives";
 import { useToast } from "@/components/ui/Toast";
-import { firstName, relativeTime } from "@/lib/compute";
+import { firstName } from "@/lib/compute";
+import { RelativeTime } from "@/components/RelativeTime";
 
 type InboxRow = {
   id: string;
@@ -172,7 +173,7 @@ export function InboxClient({
                   {item.source}
                 </span>
                 <span className="text-xs text-slate-500">
-                  {relativeTime(item.createdAt)}
+                  <RelativeTime iso={item.createdAt} />
                 </span>
               </div>
               <div className="text-sm text-slate-700">{item.text}</div>

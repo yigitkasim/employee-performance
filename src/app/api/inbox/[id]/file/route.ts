@@ -26,36 +26,37 @@ export async function POST(
     return badRequest("Assign this note to a member before filing");
 
   const skillName = item.skillName;
-  let fromScore = 3;
-  let toScore = 3;
 
-  // Resolve the current score for the referenced skill, if any.
-  let scoreRow = null as { id: string; current: number } | null;
+  // Resolve the member's real score for the referenced skill, if any.
+  let scoreRow: { id: string; current: number } | null = null;
   if (skillName) {
-    const s = await prisma.score.findFirst({
-      where: { memberId: item.memberId, subSkill: { name: skillName } },
+    scoreRow = await prisma.score.findFirst({
+      where: {
+        memberId: item.memberId,
+        subSkill: { name: skillName, group: { orgId: session.orgId } },
+      },
       select: { id: true, current: true },
     });
-    if (s) {
-      scoreRow = s;
-      fromScore = s.current;
-      toScore = s.current;
-    }
   }
 
+  // Only claim a score change when one actually happens. A plain observation is
+  // filed with no score at all rather than a made-up "no change · 3".
+  const willBump = bump && !!scoreRow && scoreRow.current < 5;
+  const fromScore = willBump ? scoreRow!.current : null;
+  const toScore = willBump ? scoreRow!.current + 1 : null;
+
   await prisma.$transaction(async (tx) => {
-    if (bump && scoreRow && scoreRow.current < 5) {
-      toScore = scoreRow.current + 1;
+    if (willBump) {
       await tx.score.update({
-        where: { id: scoreRow.id },
-        data: { current: toScore },
+        where: { id: scoreRow!.id },
+        data: { current: toScore! },
       });
     }
     await tx.logEntry.create({
       data: {
         memberId: item.memberId!,
         authorId: session.userId,
-        skillName: skillName || "General",
+        skillName: skillName ?? null,
         fromScore,
         toScore,
         note: item.text,
@@ -64,5 +65,10 @@ export async function POST(
     await tx.inboxItem.delete({ where: { id } });
   });
 
-  return NextResponse.json({ ok: true, bumped: toScore > fromScore, toScore });
+  return NextResponse.json({
+    ok: true,
+    bumped: willBump,
+    toScore,
+    atMax: bump && !!scoreRow && scoreRow.current >= 5,
+  });
 }

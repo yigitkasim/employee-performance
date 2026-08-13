@@ -10,9 +10,9 @@ import { firstName, fmtToday } from "@/lib/compute";
 
 type LogRow = {
   id: string;
-  skillName: string;
-  fromScore: number;
-  toScore: number;
+  skillName: string | null;
+  fromScore: number | null;
+  toScore: number | null;
   note: string;
   author: string | null;
   createdAt: string;
@@ -32,7 +32,7 @@ export function HistoryClient({
   const [filter, setFilter] = useState("all");
 
   const skillNames = useMemo(
-    () => [...new Set(logs.map((l) => l.skillName))],
+    () => [...new Set(logs.map((l) => l.skillName).filter((n): n is string => !!n))],
     [logs],
   );
   const shown =
@@ -89,7 +89,8 @@ export function HistoryClient({
         <div className="col-span-2 space-y-3">
           {shown.length ? (
             shown.map((l) => {
-              const same = l.fromScore === l.toScore;
+              const hasScore = l.fromScore != null && l.toScore != null;
+              const same = hasScore && l.fromScore === l.toScore;
               return (
                 <div
                   key={l.id}
@@ -106,16 +107,16 @@ export function HistoryClient({
                   <div className="col-span-10">
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-medium">
-                        {l.skillName}
+                        {l.skillName ?? "Observation"}
                       </span>
-                      {same ? (
+                      {!hasScore ? null : same ? (
                         <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-500">
                           no change · {l.fromScore}
                         </span>
                       ) : (
                         <span
                           className={`text-xs px-2 py-0.5 rounded ${
-                            l.toScore > l.fromScore
+                            l.toScore! > l.fromScore!
                               ? "bg-emerald-50 text-emerald-700"
                               : "bg-rose-50 text-rose-700"
                           }`}
@@ -179,8 +180,17 @@ function TrendRows({ logs }: { logs: LogRow[] }) {
     <>
       {names.map((n) => {
         // Oldest first (logs arrive newest-first).
-        const changes = logs.filter((l) => l.skillName === n).slice().reverse();
-        let series = [changes[0].fromScore, ...changes.map((c) => c.toScore)];
+        const changes = logs
+          .filter(
+            (l) => l.skillName === n && l.fromScore != null && l.toScore != null,
+          )
+          .slice()
+          .reverse();
+        if (!changes.length) return null;
+        let series: number[] = [
+          changes[0].fromScore!,
+          ...changes.map((c) => c.toScore!),
+        ];
         while (series.length < 4) series.unshift(series[0]);
         series = series.slice(-6);
         const pts = series

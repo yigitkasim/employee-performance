@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { authed, badRequest, notFound } from "@/lib/api-helpers";
+import { ownedSubSkillId } from "@/lib/ownership";
 
 const schema = z.object({
   subSkillId: z.string(),
@@ -25,6 +26,11 @@ export async function PUT(
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return badRequest("Invalid input");
   const { subSkillId, value } = parsed.data;
+
+  // subSkillId comes from the body, so it needs its own org check.
+  if (!(await ownedSubSkillId(session.orgId, subSkillId))) {
+    return notFound("Sub-skill not found");
+  }
 
   await prisma.simValue.upsert({
     where: { memberId_subSkillId: { memberId, subSkillId } },

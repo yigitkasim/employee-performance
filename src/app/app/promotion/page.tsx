@@ -43,7 +43,9 @@ export default async function PromotionPage() {
   ]);
 
   const evidence = logs
-    .filter((l) => l.toScore > l.fromScore)
+    .filter(
+      (l) => l.fromScore != null && l.toScore != null && l.toScore > l.fromScore,
+    )
     .slice(0, 3)
     .map((l) => ({
       id: l.id,

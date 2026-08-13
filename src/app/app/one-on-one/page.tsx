@@ -36,7 +36,9 @@ export default async function OneOnOnePage({
     <OneOnOneClient
       member={{ id: m.id, name: m.name }}
       members={members}
-      wins={logRows.filter((l) => l.toScore > l.fromScore).slice(0, 2)}
+      wins={logRows
+        .filter((l) => l.fromScore != null && l.toScore != null && l.toScore > l.fromScore)
+        .slice(0, 2)}
       gaps={topGaps(m.scores, 2)}
       talkingPoints={extras.talkingPoints.map((t) => ({
         id: t.id,

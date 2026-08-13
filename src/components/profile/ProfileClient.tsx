@@ -16,18 +16,18 @@ import {
   readinessOf,
   catAvgs,
   topGaps,
-  relativeTime,
   firstName,
 } from "@/lib/compute";
 import type { MemberWithScores } from "@/lib/data";
+import { RelativeTime } from "@/components/RelativeTime";
 import { ManageMemberModal, type RoleOption } from "./ManageMemberModal";
 
 export type GoalItem = { id: string; text: string; due: string; done: boolean };
 export type LogItem = {
   id: string;
-  skillName: string;
-  fromScore: number;
-  toScore: number;
+  skillName: string | null;
+  fromScore: number | null;
+  toScore: number | null;
   note: string;
   createdAt: string;
 };
@@ -289,22 +289,26 @@ export function ProfileClient({
                   className="flex gap-3 pb-3 border-b border-slate-100 last:border-0"
                 >
                   <div className="text-xs text-slate-500 w-12 shrink-0 pt-0.5">
-                    {relativeTime(l.createdAt)}
+                    <RelativeTime iso={l.createdAt} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{l.skillName}</span>
-                      <span
-                        className={`text-xs px-2 py-0.5 ${
-                          l.toScore > l.fromScore
-                            ? "bg-emerald-50 text-emerald-700"
-                            : l.toScore < l.fromScore
-                              ? "bg-rose-50 text-rose-700"
-                              : "bg-slate-100 text-slate-500"
-                        } rounded`}
-                      >
-                        {l.fromScore} → {l.toScore}
+                      <span className="font-medium">
+                        {l.skillName ?? "Observation"}
                       </span>
+                      {l.fromScore != null && l.toScore != null && (
+                        <span
+                          className={`text-xs px-2 py-0.5 ${
+                            l.toScore > l.fromScore
+                              ? "bg-emerald-50 text-emerald-700"
+                              : l.toScore < l.fromScore
+                                ? "bg-rose-50 text-rose-700"
+                                : "bg-slate-100 text-slate-500"
+                          } rounded`}
+                        >
+                          {l.fromScore} → {l.toScore}
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-slate-600 mt-0.5">{l.note}</div>
                   </div>

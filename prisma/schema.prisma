@@ -269,10 +269,13 @@ model Score {
 // ─────────────────────────── Activity ───────────────────────────
 
 model LogEntry {
-  id        String   @id @default(cuid())
-  skillName String
-  fromScore Int
-  toScore   Int
+  id        String @id @default(cuid())
+  /// null when the entry is a plain observation not tied to a specific skill
+  skillName String?
+  /// Both null for observations. Only set when the entry records a real rating
+  /// change, so the UI never has to invent a score it doesn't have.
+  fromScore Int?
+  toScore   Int?
   note      String
   createdAt DateTime @default(now())
 

@@ -10,6 +10,11 @@ import type { Prisma } from "@prisma/client";
 /**
  * Determine which sub-skills apply to a member given their role, and the
  * expected score for each (from the expected matrix, falling back to 3).
+ *
+ * Every query below is org-scoped. Without that, a caller passing another
+ * organisation's roleId would seed the member with foreign sub-skills — which
+ * leaks that org's framework and, because Score.subSkill cascades on delete,
+ * lets the other org destroy these ratings.
  */
 async function resolveScoreSeeds(
   orgId: string,
@@ -20,7 +25,7 @@ async function resolveScoreSeeds(
   let groupIds: string[] = [];
   if (roleId) {
     const links = await prisma.skillGroupOnRole.findMany({
-      where: { roleId },
+      where: { roleId, role: { orgId }, group: { orgId } },
       select: { groupId: true },
     });
     groupIds = links.map((l) => l.groupId);
@@ -34,14 +39,14 @@ async function resolveScoreSeeds(
   }
 
   const subSkills = await prisma.subSkill.findMany({
-    where: { groupId: { in: groupIds } },
+    where: { groupId: { in: groupIds }, group: { orgId } },
     select: { id: true },
   });
 
   const expectedRows =
     roleId && levelId
       ? await prisma.expectedScore.findMany({
-          where: { roleId, levelId },
+          where: { roleId, levelId, role: { orgId } },
           select: { subSkillId: true, value: true },
         })
       : [];
