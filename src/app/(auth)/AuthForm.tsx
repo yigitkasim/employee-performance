@@ -81,6 +81,17 @@ export default function AuthForm({ mode }: { mode: "login" | "signup" }) {
               placeholder={isSignup ? "At least 8 characters" : "••••••••"}
             />
 
+            {!isSignup && (
+              <div className="text-right -mt-1">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-indigo-600 hover:underline"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
+            )}
+
             {isSignup && (
               <div className="space-y-2 pt-1">
                 <label className="flex items-start gap-2.5 cursor-pointer">

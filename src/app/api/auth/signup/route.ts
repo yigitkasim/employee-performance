@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { hashPassword, createSession } from "@/lib/auth";
+import { hashPassword, createSession, issueToken, audit } from "@/lib/auth";
+import { sendVerificationEmail } from "@/lib/email";
 import { DEFAULT_INBOX_SOURCES } from "@/lib/framework-template";
 
 const schema = z.object({
@@ -82,6 +83,16 @@ export async function POST(req: NextRequest) {
     email: user.email,
     name: user.name,
   });
+
+  // Send the confirmation email. Never fail signup if delivery has a problem —
+  // the user can resend from the in-app banner.
+  try {
+    const token = await issueToken(user.id, "EMAIL_VERIFY");
+    await sendVerificationEmail(user.email, user.name, token);
+  } catch (err) {
+    console.error("[signup] verification email failed:", err);
+  }
+  await audit("account.created", user.id, user.orgId);
 
   return NextResponse.json({ ok: true });
 }
