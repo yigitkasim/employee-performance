@@ -95,7 +95,7 @@ export function SelfClient({
         }
       />
 
-      <div className="grid grid-cols-3 gap-4 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
         <StatCard
           label="Aligned"
           value={aligned.length}
@@ -142,7 +142,7 @@ export function SelfClient({
           </div>
         )}
 
-        <div className="grid grid-cols-12 gap-3 pb-2 text-[10px] uppercase tracking-wider text-slate-400 font-medium">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 pb-2 text-[10px] uppercase tracking-wider text-slate-400 font-medium">
           <div className="col-span-3">Skill</div>
           <div className="col-span-1 text-center">Self</div>
           <div className="col-span-1 text-center">Mgr</div>
@@ -156,7 +156,7 @@ export function SelfClient({
             return (
               <div
                 key={r.id}
-                className="grid grid-cols-12 gap-3 items-center text-sm"
+                className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center text-sm"
               >
                 <div className="col-span-3 font-medium">{r.name}</div>
                 <div className="col-span-1 text-center">
@@ -219,7 +219,7 @@ export function SelfClient({
         </div>
       </Card>
 
-      <div className="mt-5 grid grid-cols-2 gap-4">
+      <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="p-5">
           <div className="font-semibold mb-2 text-amber-700">
             Biggest perception gaps to address

@@ -148,7 +148,7 @@ export function OneOnOneClient({
         }
       />
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="col-span-2 space-y-4">
           <div className="bg-white border border-slate-200 rounded-xl p-5">
             <div className="font-semibold mb-3 text-emerald-700">
@@ -262,7 +262,7 @@ export function OneOnOneClient({
             {logs.length ? (
               <ul className="text-sm divide-y divide-slate-100">
                 {logs.slice(0, 5).map((l) => (
-                  <li key={l.id} className="grid grid-cols-12 py-2 gap-2">
+                  <li key={l.id} className="grid grid-cols-1 lg:grid-cols-12 py-2 gap-2">
                     <span className="col-span-3 text-xs text-slate-500">
                       {l.date}
                     </span>

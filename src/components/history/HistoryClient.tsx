@@ -85,7 +85,7 @@ export function HistoryClient({
         }
       />
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="col-span-2 space-y-3">
           {shown.length ? (
             shown.map((l) => {
@@ -94,7 +94,7 @@ export function HistoryClient({
               return (
                 <div
                   key={l.id}
-                  className="bg-white border border-slate-200 rounded-xl p-4 grid grid-cols-12 gap-4"
+                  className="bg-white border border-slate-200 rounded-xl p-4 grid grid-cols-1 lg:grid-cols-12 gap-4"
                 >
                   <div className="col-span-2">
                     <div className="font-medium text-sm">

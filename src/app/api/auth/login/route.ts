@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import {
-  verifyPassword,
+  verifyPasswordConstantTime,
   createSession,
   isLoginBlocked,
   recordFailedLogin,
@@ -40,8 +40,10 @@ export async function POST(req: NextRequest) {
   }
   const { email, password } = parsed.data;
 
+  const ip = clientIp(req);
+
   // Throttle before doing any password work.
-  if (await isLoginBlocked(email)) {
+  if (await isLoginBlocked(email, ip)) {
     return NextResponse.json(
       { error: "Too many attempts. Try again in 15 minutes." },
       { status: 429 },
@@ -52,8 +54,16 @@ export async function POST(req: NextRequest) {
     where: { email: email.toLowerCase() },
   });
 
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    await recordFailedLogin(email, clientIp(req));
+  // Always spend the bcrypt cost, even when the account does not exist —
+  // otherwise the response time alone reveals which emails are registered
+  // (measured ~22ms unknown vs ~350ms known before this).
+  const passwordOk = await verifyPasswordConstantTime(
+    password,
+    user?.passwordHash,
+  );
+
+  if (!user || !passwordOk) {
+    await recordFailedLogin(email, ip);
     return NextResponse.json(
       { error: "Incorrect email or password" },
       { status: 401 },
@@ -68,7 +78,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  await clearLoginAttempts(email);
+  await clearLoginAttempts(email, ip);
   await createSession({
     userId: user.id,
     orgId: user.orgId,

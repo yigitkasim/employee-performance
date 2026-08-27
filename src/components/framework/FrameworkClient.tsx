@@ -272,7 +272,7 @@ function MatrixTab({
         </div>
       ) : (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-          <div className="overflow-auto scroll-area" style={{ maxHeight: "70vh" }}>
+          <div className="overflow-auto scroll-area max-w-full" style={{ maxHeight: "70vh" }}>
             <table className="w-full text-sm border-collapse">
               <thead className="sticky top-0 bg-slate-50 z-10">
                 <tr className="border-b border-slate-200">
@@ -309,7 +309,7 @@ function MatrixTab({
         </div>
       )}
 
-      <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
         <div className="bg-white border border-slate-200 rounded-lg p-3">
           <div className="text-xs text-slate-500 mb-2">Score legend</div>
           <div className="flex flex-wrap gap-2">
@@ -442,7 +442,7 @@ function RolesTab({
   const role = roles.find((r) => r.id === activeRoleId) ?? roles[0];
 
   return (
-    <div className="grid grid-cols-12 gap-5">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
       <div className="col-span-4 bg-white border border-slate-200 rounded-xl p-4">
         <div className="flex justify-between items-baseline mb-3">
           <div className="font-semibold">Roles</div>
@@ -487,7 +487,7 @@ function RolesTab({
                 Delete role
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <TextField
                 label="Name"
                 value={role.name}
@@ -578,7 +578,7 @@ function SkillsTab({
   const group = groups.find((g) => g.id === activeGroupId) ?? groups[0];
 
   return (
-    <div className="grid grid-cols-12 gap-5">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
       <div className="col-span-4 bg-white border border-slate-200 rounded-xl p-4">
         <div className="flex justify-between items-baseline mb-3">
           <div className="font-semibold">Skill groups</div>

@@ -111,7 +111,7 @@ export function TeamClient({
         }
       />
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <StatCard
           label="Team avg current"
           value={teamAvg.toFixed(1)}
@@ -130,7 +130,7 @@ export function TeamClient({
         />
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-x-auto scroll-area">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500">
             <tr>

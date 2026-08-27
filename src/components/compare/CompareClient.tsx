@@ -9,9 +9,9 @@ import { avgOf, targetOf, gapOf, catAvgs } from "@/lib/compute";
 import type { MemberWithScores } from "@/lib/data";
 
 const GRID_COLS: Record<number, string> = {
-  2: "grid-cols-2",
-  3: "grid-cols-3",
-  4: "grid-cols-4",
+  2: "grid-cols-1 md:grid-cols-2",
+  3: "grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
+  4: "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
 };
 
 /** First 3 sub-skills of each skill group, from any selected member's scores. */
@@ -188,7 +188,8 @@ export function CompareClient({ members }: { members: MemberWithScores[] }) {
         <div className="px-5 py-3 border-b border-slate-200 font-semibold">
           Side-by-side · top skills per category
         </div>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto scroll-area">
+        <table className="w-full text-sm min-w-[520px]">
           <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
             <tr>
               <th className="text-left py-2 px-4 font-medium">Skill</th>
@@ -250,6 +251,7 @@ export function CompareClient({ members }: { members: MemberWithScores[] }) {
             })}
           </tbody>
         </table>
+        </div>
       </Card>
     </>
   );

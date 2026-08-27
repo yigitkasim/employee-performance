@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Icons } from "./Icons";
 import { ToastProvider, useToast } from "./ui/Toast";
+import { Modal } from "./ui/Modal";
 import { firstName } from "@/lib/compute";
 
 export type NavMember = { id: string; name: string; color: string };
@@ -51,6 +52,13 @@ function Chrome({ data, children }: { data: ChromeData; children: React.ReactNod
   const router = useRouter();
   const [captureOpen, setCaptureOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+
+  // Close the drawer and the avatar menu whenever the route changes.
+  useEffect(() => {
+    setNavOpen(false);
+    setMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -76,22 +84,33 @@ function Chrome({ data, children }: { data: ChromeData; children: React.ReactNod
     <>
       {/* Top bar */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
+        <div className="px-4 md:px-6 h-14 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 md:gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => setNavOpen(true)}
+              aria-label="Open navigation"
+              aria-expanded={navOpen}
+              className="md:hidden -ml-1 p-2 rounded-md text-slate-600 hover:bg-slate-100"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <path d="M3 6h18M3 12h18M3 18h18" />
+              </svg>
+            </button>
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold shrink-0">
               G
             </div>
-            <div className="font-semibold">GrowthMatrix</div>
-            <span className="text-slate-300">/</span>
-            <span className="text-sm border border-slate-200 rounded-md px-2 py-1">
+            <div className="font-semibold truncate">GrowthMatrix</div>
+            <span className="text-slate-300 hidden lg:inline">/</span>
+            <span className="text-sm border border-slate-200 rounded-md px-2 py-1 hidden lg:inline truncate max-w-[12rem]">
               {data.orgName}
             </span>
-            <span className="text-slate-300">/</span>
+            <span className="text-slate-300 hidden xl:inline">/</span>
             {/* Shown as a label, not a picker: scores are not yet snapshotted
                 per cycle, so offering a switcher would imply filtering that
                 doesn't happen. */}
             <span
-              className="text-sm border border-slate-200 rounded-md px-2 py-1 text-slate-600"
+              className="text-sm border border-slate-200 rounded-md px-2 py-1 text-slate-600 hidden xl:inline"
               title="The review cycle currently in progress"
             >
               {data.cycles.find((c) => c.active)?.name ??
@@ -99,38 +118,46 @@ function Chrome({ data, children }: { data: ChromeData; children: React.ReactNod
                 "Current cycle"}
             </span>
           </div>
-          <div className="flex items-center gap-2 text-sm relative">
+          <div className="flex items-center gap-2 text-sm relative shrink-0">
             <button
               onClick={() => setCaptureOpen(true)}
-              className="px-3 py-1.5 rounded-md text-slate-600 hover:bg-slate-100 flex items-center gap-1.5"
+              className="px-2 md:px-3 py-1.5 rounded-md text-slate-600 hover:bg-slate-100 flex items-center gap-1.5"
+              aria-label="Quick capture"
             >
               <Icons.plus />
-              Quick capture
-              <kbd className="ml-1 text-[10px] bg-slate-100 px-1.5 py-0.5 rounded">
+              <span className="hidden sm:inline">Quick capture</span>
+              <kbd className="ml-1 text-[10px] bg-slate-100 px-1.5 py-0.5 rounded hidden lg:inline">
                 ⌘⇧L
               </kbd>
             </button>
             <button
               onClick={() => setMenuOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
               className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-medium"
               title={data.userName}
             >
               {userInitial}
             </button>
             {menuOpen && (
-              <div className="absolute right-0 top-11 bg-white border border-slate-200 rounded-lg shadow-lg py-1 w-48 z-40">
+              <div
+                role="menu"
+                className="absolute right-0 top-11 bg-white border border-slate-200 rounded-lg shadow-lg py-1 w-48 z-40"
+              >
                 <div className="px-3 py-2 border-b border-slate-100">
                   <div className="font-medium text-sm truncate">{data.userName}</div>
                   <div className="text-xs text-slate-500 truncate">{data.orgName}</div>
                 </div>
                 <Link
                   href="/app/account"
+                  role="menuitem"
                   onClick={() => setMenuOpen(false)}
                   className="block px-3 py-2 text-sm hover:bg-slate-50 text-slate-700"
                 >
                   Account &amp; privacy
                 </Link>
                 <button
+                  role="menuitem"
                   onClick={logout}
                   className="w-full text-left px-3 py-2 text-sm hover:bg-slate-50 text-slate-700"
                 >
@@ -143,9 +170,36 @@ function Chrome({ data, children }: { data: ChromeData; children: React.ReactNod
       </header>
 
       <div className="flex">
-        {/* Sidebar */}
-        <aside className="w-60 border-r border-slate-200 bg-white min-h-[calc(100vh-3.5rem)] p-3 sticky top-14 self-start">
-          <nav className="space-y-0.5 text-sm">
+        {/* Sidebar — static from md up, a drawer below it */}
+        {navOpen && (
+          <div
+            className="fixed inset-0 bg-slate-900/40 z-40 md:hidden"
+            onClick={() => setNavOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+        <aside
+          className={`${
+            navOpen ? "translate-x-0" : "-translate-x-full"
+          } md:translate-x-0 fixed md:sticky top-0 md:top-14 left-0 z-50 md:z-auto
+             h-full md:h-auto w-64 md:w-60 shrink-0 overflow-y-auto
+             border-r border-slate-200 bg-white md:min-h-[calc(100vh-3.5rem)] p-3
+             self-start transition-transform duration-200 ease-out`}
+        >
+          <div className="flex items-center justify-between mb-2 md:hidden">
+            <span className="font-semibold px-2">Menu</span>
+            <button
+              type="button"
+              onClick={() => setNavOpen(false)}
+              aria-label="Close navigation"
+              className="p-2 rounded-md text-slate-500 hover:bg-slate-100"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <nav className="space-y-0.5 text-sm" aria-label="Main">
             {NAV.map((n) => {
               const active = n.exact
                 ? pathname === n.href
@@ -155,6 +209,8 @@ function Chrome({ data, children }: { data: ChromeData; children: React.ReactNod
                 <Link
                   key={n.href}
                   href={n.href}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => setNavOpen(false)}
                   className={`nav-item ${active ? "active" : ""} w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-slate-700 hover:bg-slate-50 text-left`}
                 >
                   <Icon />
@@ -191,9 +247,12 @@ function Chrome({ data, children }: { data: ChromeData; children: React.ReactNod
 
         {/* Content */}
         <main className="flex-1 min-w-0">
-          <div className="max-w-[1400px] mx-auto px-6 py-6">{children}</div>
+          <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-5 md:py-6">
+            {children}
+          </div>
         </main>
       </div>
+
 
       {captureOpen && (
         <QuickCapture
@@ -243,25 +302,13 @@ function QuickCapture({
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center"
-      onClick={onClose}
+    <Modal
+      title="Quick capture"
+      description="Drop an observation now, file it later."
+      onClose={onClose}
+      width="w-[560px]"
     >
-      <div
-        className="bg-white rounded-xl shadow-2xl w-[560px] p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex justify-between items-start mb-3">
-          <div>
-            <div className="font-semibold text-base">Quick capture</div>
-            <div className="text-xs text-slate-500">
-              Drop an observation now, file it later.
-            </div>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700">
-            ✕
-          </button>
-        </div>
+      <div>
         <textarea
           autoFocus
           value={text}
@@ -309,6 +356,6 @@ function QuickCapture({
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

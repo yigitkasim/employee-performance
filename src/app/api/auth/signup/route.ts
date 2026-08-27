@@ -1,20 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { hashPassword, createSession, issueToken, audit } from "@/lib/auth";
+import {
+  hashPassword,
+  createSession,
+  issueToken,
+  audit,
+  passwordProblem,
+} from "@/lib/auth";
+import { isRateLimited, recordAttempt, clientIp } from "@/lib/rate-limit";
 import { sendVerificationEmail } from "@/lib/email";
 import { DEFAULT_INBOX_SOURCES } from "@/lib/framework-template";
+import { zName, zEmail, zPassword } from "@/lib/validation";
 
-const schema = z.object({
-  name: z.string().min(1, "Your name is required").max(120),
-  email: z.string().email("Enter a valid email"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  orgName: z.string().min(1, "Organization name is required").max(120),
-  // GDPR Art. 7 / KVKK accountability: consent must be explicit and recorded.
-  acceptTerms: z.boolean().optional(),
-  // Separate, optional opt-in (GDPR / CASL / CAN-SPAM).
-  marketingOptIn: z.boolean().optional(),
-});
+const schema = z
+  .object({
+    name: zName,
+    email: zEmail,
+    password: zPassword,
+    orgName: zName,
+    // GDPR Art. 7 / KVKK accountability: consent must be explicit and recorded.
+    acceptTerms: z.boolean().optional(),
+    // Separate, optional opt-in (GDPR / CASL / CAN-SPAM).
+    marketingOptIn: z.boolean().optional(),
+  })
+  .strict();
 
 export async function POST(req: NextRequest) {
   let body: unknown;
@@ -34,6 +44,15 @@ export async function POST(req: NextRequest) {
   const { name, email, password, orgName, acceptTerms, marketingOptIn } =
     parsed.data;
 
+  // Cap mass org creation from one source.
+  const ip = clientIp(req);
+  if (await isRateLimited("signup", ip || "noip")) {
+    return NextResponse.json(
+      { error: "Too many sign-ups from here. Please try again later." },
+      { status: 429 },
+    );
+  }
+
   if (acceptTerms !== true) {
     return NextResponse.json(
       {
@@ -44,10 +63,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const pwProblem = passwordProblem(password, { email, name, orgName });
+  if (pwProblem) {
+    return NextResponse.json({ error: pwProblem }, { status: 400 });
+  }
+
+  await recordAttempt("signup", ip || "noip", ip);
+
   const existing = await prisma.user.findUnique({
-    where: { email: email.toLowerCase() },
+    where: { email },
+    select: { id: true },
   });
   if (existing) {
+    // Signup necessarily reveals that an email is taken (the user needs to know
+    // why they can't proceed). Rate limiting above keeps this from being usable
+    // for bulk enumeration; the forgot-password flow stays non-disclosing.
     return NextResponse.json(
       { error: "An account with that email already exists" },
       { status: 409 },
@@ -67,7 +97,7 @@ export async function POST(req: NextRequest) {
     return tx.user.create({
       data: {
         name,
-        email: email.toLowerCase(),
+        email,
         passwordHash,
         role: "OWNER",
         orgId: org.id,
