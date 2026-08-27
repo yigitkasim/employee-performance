@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Modal } from "@/components/ui/Modal";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PageHeader, Card } from "@/components/primitives";
@@ -74,7 +75,7 @@ export function AccountClient({
           <div className="text-xs text-slate-500 mt-0.5">
             Read-only. Contact support to change your email address.
           </div>
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 mt-4">
+          <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mt-4">
             <Row label="Name" value={name} />
             <Row label="Email" value={email} />
             <Row label="Workspace" value={orgName} />
@@ -254,27 +255,13 @@ function DeleteAccountModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center"
-      onClick={onClose}
+    <Modal
+      title="Delete your account"
+      description="This is permanent. There is no undo and no recovery."
+      onClose={onClose}
+      width="w-[480px]"
     >
-      <div
-        className="bg-white rounded-xl shadow-2xl w-[480px] p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex justify-between items-start mb-3">
-          <div>
-            <div className="font-semibold text-base text-rose-700">
-              Delete your account
-            </div>
-            <div className="text-xs text-slate-500">
-              This is permanent. There is no undo and no recovery.
-            </div>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700">
-            ✕
-          </button>
-        </div>
+      <div>
 
         <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-md px-3 py-2">
           {isOnlyUser ? (
@@ -326,6 +313,6 @@ function DeleteAccountModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

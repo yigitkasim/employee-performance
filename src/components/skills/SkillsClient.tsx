@@ -119,7 +119,7 @@ function CategoryCard({
           </span>
         </div>
       </summary>
-      <div className="grid grid-cols-12 gap-5 p-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 p-5">
         <div className="col-span-5">
           <RadarChart
             labels={sks.map((s) => s.subSkillName)}
@@ -142,7 +142,7 @@ function CategoryCard({
           />
         </div>
         <div className="col-span-7">
-          <div className="grid grid-cols-12 gap-2 px-2 pb-2 text-[10px] uppercase tracking-wider text-slate-400 font-medium border-b border-slate-100">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 px-2 pb-2 text-[10px] uppercase tracking-wider text-slate-400 font-medium border-b border-slate-100">
             <div className="col-span-4">Skill</div>
             <div className="col-span-3">Current</div>
             <div className="col-span-3">Expected</div>
@@ -168,7 +168,7 @@ function SkillRow({
 }) {
   const d = row.expected - row.current;
   return (
-    <div className="skill-row px-2 py-2 grid grid-cols-12 gap-2 items-center text-sm">
+    <div className="skill-row px-2 py-2 grid grid-cols-1 lg:grid-cols-12 gap-2 items-center text-sm">
       <div className="col-span-4 font-medium truncate">{row.subSkillName}</div>
       <div className="col-span-3">
         <div className="flex gap-1">

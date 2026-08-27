@@ -8,12 +8,16 @@ import {
   clearLoginAttempts,
   destroySession,
   audit,
+  passwordProblem,
 } from "@/lib/auth";
+import { zPassword } from "@/lib/validation";
 
-const schema = z.object({
-  token: z.string().min(1),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
+const schema = z
+  .object({
+    token: z.string().min(1).max(256),
+    password: zPassword,
+  })
+  .strict();
 
 export async function POST(req: NextRequest) {
   const parsed = schema.safeParse(await req.json().catch(() => null));
@@ -35,8 +39,18 @@ export async function POST(req: NextRequest) {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { email: true },
+    select: { email: true, name: true, org: { select: { name: true } } },
   });
+
+  // Enforce the strength policy on reset too, not just at signup.
+  const pwProblem = passwordProblem(password, {
+    email: user?.email,
+    name: user?.name,
+    orgName: user?.org?.name,
+  });
+  if (pwProblem) {
+    return NextResponse.json({ error: pwProblem }, { status: 400 });
+  }
 
   await prisma.user.update({
     where: { id: userId },

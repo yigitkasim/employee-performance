@@ -91,23 +91,23 @@ export function ProfileClient({
 
   return (
     <>
-      <div className="flex justify-between items-start mb-5">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start mb-5 gap-3">
+        <div className="flex items-center gap-3 md:gap-4 min-w-0">
           <Avatar
             name={member.name}
             color={member.color}
             initials={member.initials}
             size="lg"
           />
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
+          <div className="min-w-0">
+            <h1 className="text-xl md:text-2xl font-semibold tracking-tight truncate">
               {member.name}
             </h1>
             <p className="text-slate-500 text-sm">{subtitle}</p>
           </div>
           <StatusBadge status={member.status} />
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center flex-wrap lg:flex-nowrap lg:shrink-0">
           <MemberSelect members={members} currentId={member.id} />
           <Link
             href={`/app/skills?member=${member.id}`}
@@ -137,7 +137,7 @@ export function ProfileClient({
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
         <StatCard label="Average current" value={avg.toFixed(1)} sub="/ 5" />
         <StatCard label="Average expected" value={target.toFixed(1)} sub="/ 5" />
         <StatCard
@@ -149,7 +149,7 @@ export function ProfileClient({
         <StatCard label="Readiness" value={readiness} sub="/100" />
       </div>
 
-      <div className="grid grid-cols-5 gap-4 mb-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 sm:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">
         <Card className="col-span-3 p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="font-semibold">Current vs expected</div>
@@ -215,7 +215,7 @@ export function ProfileClient({
 
       <Card className="p-5 mb-5">
         <div className="font-semibold mb-3">Category breakdown</div>
-        <div className="grid grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 sm:grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:grid-cols-5 gap-4">
           {cats.map((c) => (
             <Link
               key={c.cat}
@@ -234,7 +234,7 @@ export function ProfileClient({
         </div>
       </Card>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="p-5">
           <div className="font-semibold mb-3">Development goals · H1 2026</div>
           {goals.length ? (

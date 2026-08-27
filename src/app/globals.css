@@ -88,3 +88,41 @@ details > summary::-webkit-details-marker {
 .sim-track:active {
   cursor: grabbing;
 }
+
+/* ── Accessibility: a visible focus ring on every keyboard-focused control ──
+   Tailwind's preflight removes the UA outline, and no focus styles were added,
+   so keyboard users had no idea where they were. :focus-visible keeps it off
+   for mouse clicks. */
+:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.dotbtn:focus-visible {
+  outline-offset: 0;
+}
+
+/* Respect a user's reduced-motion preference. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Screen-reader-only helper for labels that shouldn't be visible. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

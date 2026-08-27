@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
+import { Modal } from "@/components/ui/Modal";
 
 export type RoleOption = {
   id: string;
@@ -58,26 +59,13 @@ export function AddMemberModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center"
-      onClick={onClose}
+    <Modal
+      title="Add team member"
+      description="They'll start with target scores from the role's framework."
+      onClose={onClose}
+      width="w-[480px]"
     >
-      <div
-        className="bg-white rounded-xl shadow-2xl w-[480px] p-5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <div className="font-semibold text-base">Add team member</div>
-            <div className="text-xs text-slate-500">
-              They&apos;ll start with target scores from the role&apos;s framework.
-            </div>
-          </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700">
-            ✕
-          </button>
-        </div>
-
+      <div className="p-0">
         <div className="space-y-3">
           <label className="block">
             <span className="text-xs text-slate-500">Full name</span>
@@ -99,7 +87,7 @@ export function AddMemberModal({
             />
           </label>
           {roles.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <label className="block">
                 <span className="text-xs text-slate-500">Role</span>
                 <select
@@ -158,6 +146,6 @@ export function AddMemberModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

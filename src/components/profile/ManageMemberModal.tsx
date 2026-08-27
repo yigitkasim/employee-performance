@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
+import { Modal } from "@/components/ui/Modal";
 
 export type RoleOption = {
   id: string;
@@ -101,29 +102,14 @@ export function ManageMemberModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-slate-900/40 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
+    <Modal
+      title="Manage member"
+      description="Correct their details, move them to a new level, or remove them."
+      onClose={onClose}
+      width="w-[520px]"
     >
-      <div
-        className="bg-white rounded-xl shadow-2xl w-[520px] max-h-[90vh] overflow-auto scroll-area"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="-m-5">
         <div className="p-5">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <div className="font-semibold text-base">Manage member</div>
-              <div className="text-xs text-slate-500">
-                Correct their details, move them to a new level, or remove them.
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-slate-400 hover:text-slate-700"
-            >
-              ✕
-            </button>
-          </div>
 
           <div className="space-y-3">
             <label className="block">
@@ -145,7 +131,7 @@ export function ManageMemberModal({
             </label>
 
             {roles.length > 0 && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <label className="block">
                   <span className="text-xs text-slate-500">Role</span>
                   <select
@@ -279,6 +265,6 @@ export function ManageMemberModal({
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

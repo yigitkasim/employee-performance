@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { consumeToken, issueToken, getSession, audit } from "@/lib/auth";
 import { sendVerificationEmail } from "@/lib/email";
+import { isRateLimited, recordAttempt } from "@/lib/rate-limit";
 
 const schema = z.object({ token: z.string().min(1) });
 
@@ -43,6 +44,15 @@ export async function PUT() {
   });
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (user.emailVerifiedAt) return NextResponse.json({ ok: true, already: true });
+
+  // Cap resend spam (each one sends an email).
+  if (await isRateLimited("verify-resend", user.id)) {
+    return NextResponse.json(
+      { error: "Please wait before requesting another email." },
+      { status: 429 },
+    );
+  }
+  await recordAttempt("verify-resend", user.id);
 
   const token = await issueToken(user.id, "EMAIL_VERIFY");
   const res = await sendVerificationEmail(user.email, user.name, token);

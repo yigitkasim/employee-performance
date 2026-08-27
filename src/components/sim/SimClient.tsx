@@ -121,7 +121,7 @@ export function SimClient({
   const bandPrefix = member.levelName ? `${member.levelName} · ` : "";
 
   const nowSim = (now: React.ReactNode, simVal: React.ReactNode) => (
-    <span className="flex items-baseline gap-1.5">
+    <span className="flex items-baseline gap-1.5 flex-wrap">
       <span className="text-slate-400">{now}</span>
       <span className="text-slate-300">→</span>
       <span className="text-indigo-600">{simVal}</span>
@@ -152,10 +152,10 @@ export function SimClient({
         }
       />
 
-      <div className="grid grid-cols-4 gap-4 mb-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
         <div className="bg-white border border-slate-200 rounded-xl p-4">
           <div className="text-xs text-slate-500">Readiness</div>
-          <div className="mt-1 text-xl font-semibold flex items-baseline gap-1.5">
+          <div className="mt-1 text-xl font-semibold flex items-baseline gap-1.5 flex-wrap">
             <span className="text-slate-400">{rNow}</span>
             <span className="text-slate-300">→</span>
             <span className="text-indigo-600">{rSim}</span>
@@ -192,7 +192,7 @@ export function SimClient({
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="col-span-2 p-5">
           <div className="font-semibold mb-1">Drag the dot to simulate</div>
           <div className="text-xs text-slate-500 mb-4">

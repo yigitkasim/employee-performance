@@ -106,7 +106,7 @@ export function PromotionClient({
         }
       />
 
-      <div className="grid grid-cols-3 gap-4 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-5">
         <div className="bg-white border border-slate-200 rounded-xl p-5">
           <div className="flex justify-between items-start mb-3">
             <div className="flex items-center gap-3">
@@ -176,7 +176,7 @@ export function PromotionClient({
           <div className="text-xs text-slate-500 mb-3">
             Click to toggle — your call, not the system&apos;s.
           </div>
-          <div className="grid grid-cols-2 gap-2 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
             {items.map((item) => (
               <button
                 key={item.id}
@@ -226,7 +226,7 @@ export function PromotionClient({
       <div className="bg-white border border-slate-200 rounded-xl p-5">
         <div className="font-semibold mb-3">Others on the path</div>
         {others.length ? (
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {others.map((t) => (
               <Link
                 key={t.id}
