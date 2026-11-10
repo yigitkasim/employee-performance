@@ -2,7 +2,16 @@
   "name": "growthmatrix",
   "version": "1.0.0",
   "private": true,
-  "description": "GrowthMatrix — manager tool for evaluating team members (SaaS)",
+  "description": "GrowthMatrix — open-source tool for managers to evaluate and grow their team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yigitkasim/employee-performance.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yigitkasim/employee-performance/issues"
+  },
+  "homepage": "https://github.com/yigitkasim/employee-performance#readme",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
